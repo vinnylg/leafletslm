@@ -1,13 +1,13 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "leaflets"
 version = "0.0.1"
 description = "Consolidated repository for ETL, modeling, experiments, and deployment of the master's thesis in Computer Science at the Department of Computer Science of the Federal University of Paran\u00e1, Curitiba - Brazil, focusing on the development of a Small Language Model (SLM) using drug package inserts."
 authors = [
-  { name = "Vin\u00edcius de Lima Gon\u00e7alves" },
+  { name = "Vinícius de Lima Gonçalves" },
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -15,28 +15,52 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: BSD License"
 ]
-dependencies = [
-    "loguru",
-    "mkdocs",
-    "pip",
-    "pytest",
-    "python-dotenv",
-    "ruff",
-    "tqdm",
-    "typer",
-]
 requires-python = "~=3.12.0"
 
+dependencies = [
+    "dagster==1.12.1",
+    "loguru",
+    "python-dotenv",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver",
+    "dagster-dg-cli",
+    "mkdocs",
+    "pytest",
+    "ruff",
+    "typer",
+]
+
+
+[tool.hatch.build]
+packages = [
+    "leaflets",
+    "pipeline"
+]
+
+[tool.hatch.build.targets.wheel]
+force-include = { "pyproject.toml" = "pyproject.toml" }
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "pipeline"
+registry_modules = [
+    "pipeline.components.*",
+]
 
 [tool.ruff]
 line-length = 99
-src = ["leaflets"]
-include = ["pyproject.toml", "leaflets/**/*.py"]
+src = ["leaflets", "pipeline"]
+include = ["pyproject.toml", "leaflets/**/*.py", "pipeline/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
 
 [tool.ruff.lint.isort]
-known-first-party = ["leaflets"]
+known-first-party = ["leaflets", "pipeline"]
 force-sort-within-sections = true
-
