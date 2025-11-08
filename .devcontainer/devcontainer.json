@@ -103,7 +103,10 @@
         // Desativa o Github Copilot neste ambiente
         "github.copilot.enable": {
           "*": false
-        }
+        },
+
+        "editor.stickyScroll.enabled": false,
+        "terminal.integrated.stickyScroll.enabled": false
       }
     }
   }
