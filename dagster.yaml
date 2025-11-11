@@ -1,0 +1,11 @@
+# execution:
+#   multiprocess:
+#     max_concurrent:
+#       env: BROWSER_NODES
+
+storage:
+  sqlite:
+    base_dir: "storage"
+
+telemetry:
+  enabled: false

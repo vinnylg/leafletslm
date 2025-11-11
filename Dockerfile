@@ -1,8 +1,13 @@
 FROM python:3.12-slim
 
-# Variáveis de ambiente para uv
-ENV PATH="/workspace/.venv/bin:$PATH" \
-    UV_LINK_MODE=copy
+ARG USER=devel
+ARG UID=1000
+ARG GID=1000
+
+ENV PATH="/home/${USER}/.local/bin:${PATH}"
+ENV PATH="/workspace/.venv/bin:${PATH}"
+ENV UV_LINK_MODE=copy
+ENV VIRTUAL_ENV=/workspace/.venv
 
 RUN apt-get update && apt-get install -y sudo \
     git \
@@ -13,10 +18,6 @@ RUN apt-get update && apt-get install -y sudo \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/* &&\
     update-ca-certificates
-
-ARG USER=devel
-ARG UID=1000
-ARG GID=1000
 
 RUN if ! getent group ${GID} >/dev/null 2>&1; then \
     groupadd --gid ${GID} ${USER}; \
@@ -33,21 +34,15 @@ RUN echo "${USER} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
 
 USER ${USER}
 
-# Instalar uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/home/${USER}/.local/bin:${PATH}"
-
 WORKDIR /workspace
 
-# COPY --chown=${USER}:${USER} pyproject.toml uv.lock* ./
-
-# RUN uv sync --locked --no-install-project
-
-# 3. Copiar código fonte
 COPY --chown=${USER}:${USER} . .
 
-RUN uv sync --locked
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN uv venv
+RUN uv sync --locked --all-extras
 
-# Shell completions
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
+
+CMD ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "pipelines.definitions"]

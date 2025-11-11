@@ -6,17 +6,17 @@ services:
         - USER=${USER}
         - UID=${UID}
         - GID=${GID}
-    # container_name: leafletslm
+    container_name: leafletslm
     volumes:
       - ./:/workspace
     networks:
       - selenium
-    # ports:
-    #   - "3000:3000"
+    ports:
+      - "3000:3000"
     tty: true
     env_file:
       - .env
-    # command: dagster dev -h 0.0.0.0 -p 3000 -m leaflets.pipelines.definitions
+    command: dagster dev -h 0.0.0.0 -p 3000 -m pipelines.definitions
     develop:
       watch:
         - path: ./pyproject.toml
@@ -38,7 +38,7 @@ services:
 
   selenium-hub:
     image: selenium/hub:4.15.0
-    container_name: leafletslm-selenium-hub
+    container_name: lslm-selenium
     ports:
       - "4442:4442"
       - "4443:4443"
@@ -56,6 +56,7 @@ services:
 
   selenium-firefox:
     image: selenium/node-firefox:4.15.0
+    container_name: lslm-firefox
     shm_size: 4gb
     depends_on:
       selenium-hub:

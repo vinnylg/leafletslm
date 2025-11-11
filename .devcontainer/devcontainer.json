@@ -3,7 +3,7 @@
   "dockerComposeFile": ["../compose.yaml"],
   "service": "leafletslm",
   "workspaceFolder": "/workspace",
-
+  "overrideCommand": false,
   "customizations": {
     "vscode": {
       "extensions": [
