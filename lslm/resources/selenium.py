@@ -22,8 +22,8 @@ from dagster import resource
 from retry import retry
 from selenium import webdriver
 
-from leaflets.config import HUB_URL
-from leaflets.utils.selenium import (
+from lslm.config import HUB_URL
+from lslm.utils.selenium import (
     get_firefox_options,
     validate_driver_connection,
 )

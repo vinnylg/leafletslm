@@ -1,11 +1,14 @@
+storage:
+  sqlite:
+    base_dir: data/storage
+
+run_launcher:
+  module: dagster.core.launcher
+  class: DefaultRunLauncher
+
+telemetry:
+  enabled: false
 # execution:
 #   multiprocess:
 #     max_concurrent:
 #       env: BROWSER_NODES
-
-storage:
-  sqlite:
-    base_dir: "storage"
-
-telemetry:
-  enabled: false

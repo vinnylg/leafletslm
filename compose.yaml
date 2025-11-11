@@ -16,7 +16,7 @@ services:
     tty: true
     env_file:
       - .env
-    command: dagster dev -h 0.0.0.0 -p 3000 -m pipelines.definitions
+    command: dagster dev -h 0.0.0.0 -p 3000 -m lslm.definitions
     develop:
       watch:
         - path: ./pyproject.toml
