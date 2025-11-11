@@ -1,0 +1,13 @@
+run_launcher:
+  module: dagster.core.launcher
+  class: DefaultRunLauncher
+
+storage:
+  sqlite:
+    base_dir: /workspace/.dagster/storage
+
+execution:
+  multiprocess:
+
+telemetry:
+  enabled: false

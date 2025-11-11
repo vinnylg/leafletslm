@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "leafletslm"
+name = "lslm"
 version = "0.0.1"
 description = "Consolidated repository for ETL, modeling, experiments, and deployment of the master's thesis in Computer Science at the Department of Computer Science of the Federal University of Paran\u00e1, Curitiba - Brazil, focusing on the development of a Small Language Model (SLM) using drug package inserts."
 authors = [
@@ -19,20 +19,20 @@ requires-python = "~=3.12.0"
 
 dependencies = [
     "dagster==1.12.1",
-    "loguru",
-    "python-dotenv",
+    "loguru>=0.7.0",
+    "python-dotenv>=1.0.0",
     "retry>=0.9.2",
-    "selenium>=4.38.0",
-    "tqdm",
+    "selenium>=4.38.0,<5.0",
+    "tqdm>=4.60.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "dagster-webserver",
-    "mkdocs",
-    "pytest",
-    "ruff",
-    "typer",
+    "dagster-webserver==1.12.1",
+    "mkdocs>=1.5.0",
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+    "typer>=0.9.0",
 ]
 
 

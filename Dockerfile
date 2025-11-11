@@ -6,8 +6,8 @@ ARG GID=1000
 
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
 ENV PATH="/workspace/.venv/bin:${PATH}"
-ENV UV_LINK_MODE=copy
 ENV VIRTUAL_ENV=/workspace/.venv
+ENV UV_LINK_MODE=copy
 
 RUN apt-get update && apt-get install -y sudo \
     git \
@@ -36,13 +36,17 @@ USER ${USER}
 
 WORKDIR /workspace
 
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 COPY --chown=${USER}:${USER} . .
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN uv venv
-RUN uv sync --locked --all-extras
+RUN uv venv ${VIRTUAL_ENV}}
+# RUN source ${VIRTUAL_ENV}/bin/activate
+RUN uv sync --all-extras --locked
 
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
 
-CMD ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "pipelines.definitions"]
+RUN chmod -R 777 /workspace/scripts
+
+# ENTRYPOINT ["/workspace/scripts/start-dagster.sh"]

@@ -6,35 +6,34 @@ services:
         - USER=${USER}
         - UID=${UID}
         - GID=${GID}
-    container_name: leafletslm
+    container_name: lslm
     volumes:
       - ./:/workspace
     networks:
-      - selenium
+      - lslm_network
     ports:
       - "3000:3000"
     tty: true
     env_file:
       - .env
-    command: dagster dev -h 0.0.0.0 -p 3000 -m lslm.definitions
-    develop:
-      watch:
-        - path: ./pyproject.toml
-          action: rebuild
-        - path: ./uv.lock
-          action: rebuild
-        - path: ./Dockerfile
-          action: rebuild
-        - path: ./compose.yaml
-          action: rebuild
-        - path: .
-          action: sync
-          target: /workspace
-          ignore:
-            - .venv/
-            - .git/
-            - __pycache__/
-            - "*.pyc"
+    # develop:
+    #   watch:
+    #     - path: ./pyproject.toml
+    #       action: rebuild
+    #     - path: ./uv.lock
+    #       action: rebuild
+    #     - path: ./Dockerfile
+    #       action: rebuild
+    #     - path: ./compose.yaml
+    #       action: rebuild
+    #     - path: .
+    #       action: sync
+    #       target: /workspace
+    #       ignore:
+    #         - .venv/
+    #         - .git/
+    #         - __pycache__/
+    #         - "*.pyc"
 
   selenium-hub:
     image: selenium/hub:4.15.0
@@ -50,7 +49,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - selenium
+      - lslm_network
     env_file:
       - .env
 
@@ -64,7 +63,7 @@ services:
     deploy:
       replicas: ${NODES:-1}
     networks:
-      - selenium
+      - lslm_network
     ports:
       # This is only for debug. See more how disable when finish development
       # (For more than one node, don't redirect ports, expose 5900 and then give control to docker)
@@ -74,5 +73,5 @@ services:
       - .env
 
 networks:
-  selenium:
+  lslm_network:
     driver: bridge

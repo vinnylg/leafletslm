@@ -1,0 +1,4 @@
+load_from:
+  - python_module: lslm.definitions
+    working_directory: /workspace
+    display_name: "Pipeline for Leaflets SLM"

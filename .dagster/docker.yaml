@@ -1,0 +1,11 @@
+run_launcher:
+  module: dagster_docker
+  class: DockerRunLauncher
+  config:
+    network: leafletslm_default
+    container_kwargs:
+      volumes:
+        - /workspace:/workspace
+      environment:
+        - DAGSTER_HOME=/workspace/.dagster
+# uv add dagster-docker

@@ -15,9 +15,10 @@ PYTHON_INTERPRETER = python
 .PHONY: requirements
 requirements:
 	uv sync
-	
 
-
+.PHONY: dev
+requirements:
+	uv sync --all-extras
 
 ## Delete all compiled Python files
 .PHONY: clean
@@ -25,6 +26,11 @@ clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name "*.tmp*" -exec rm -rf {} \;
+
+
+.PHONY: prune
+prune:
+	rm -rf .venv
 
 
 ## Lint using ruff (use `make format` to do formatting)
@@ -67,6 +73,33 @@ create_environment:
 .PHONY: data
 data: requirements
 	$(PYTHON_INTERPRETER) leaflets/dataset.py
+
+
+#################################################################################
+# DAGSTER COMMANDS                                                              #
+#################################################################################
+
+## Start Dagster dev server (inside container)
+.PHONY: dagster-up
+dagster-up:
+	/workspace/scripts/start-dagster.sh
+
+## Stop Dagster dev server
+.PHONY: dagster-down
+dagster-down:
+	pkill -f "dagster dev" || echo "Dagster not running"
+
+## Restart Dagster dev server
+.PHONY: dagster-restart
+dagster-restart: dagster-stop dagster-dev
+
+## Clean Dagster storage (runs, schedules, etc)
+.PHONY: dagster-clean
+dagster-clean:
+	rm -rf .dagster/storage/*
+	mkdir -p .dagster/storage
+	@echo ">>> Dagster storage cleaned"
+
 
 
 #################################################################################
