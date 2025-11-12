@@ -49,4 +49,4 @@ RUN chmod -R 777 /workspace/scripts
 
 RUN which python && python --version && which pip && whereis dagster
 
-#ENTRYPOINT ["/workspace/scripts/start-dagster.sh"]
+ENTRYPOINT ["/workspace/scripts/start-dagster.sh"]

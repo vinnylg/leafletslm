@@ -6,8 +6,5 @@ storage:
   sqlite:
     base_dir: /workspace/.dagster/storage
 
-execution:
-  multiprocess:
-
 telemetry:
   enabled: false

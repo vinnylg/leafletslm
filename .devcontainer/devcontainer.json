@@ -41,7 +41,7 @@
         "[python]": {
           "editor.formatOnSave": true,
           "editor.defaultFormatter": "charliermarsh.ruff",
-          "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
+          // "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
           "python.terminal.activateEnvironment": true
         },
 

@@ -6,38 +6,20 @@ services:
         - USER=${USER}
         - UID=${UID}
         - GID=${GID}
-    container_name: lslm
+    container_name: leafletslm
     volumes:
       - ./:/workspace
-    networks:
-      - lslm_network
+    # networks:
+    #   - leafletslm_network
     ports:
-      - "3000:3000"
+      - "3333:3000"
     tty: true
     env_file:
       - .env
-    # develop:
-    #   watch:
-    #     - path: ./pyproject.toml
-    #       action: rebuild
-    #     - path: ./uv.lock
-    #       action: rebuild
-    #     - path: ./Dockerfile
-    #       action: rebuild
-    #     - path: ./compose.yaml
-    #       action: rebuild
-    #     - path: .
-    #       action: sync
-    #       target: /workspace
-    #       ignore:
-    #         - .venv/
-    #         - .git/
-    #         - __pycache__/
-    #         - "*.pyc"
 
   selenium-hub:
     image: selenium/hub:4.15.0
-    container_name: lslm-selenium
+    container_name: leafletslm-selenium
     ports:
       - "4442:4442"
       - "4443:4443"
@@ -48,22 +30,22 @@ services:
       timeout: 30s
       retries: 5
       start_period: 30s
-    networks:
-      - lslm_network
+    # networks:
+    #   - leafletslm_network
     env_file:
       - .env
 
   selenium-firefox:
     image: selenium/node-firefox:4.15.0
-    container_name: lslm-firefox
+    container_name: leafletslm-firefox
     shm_size: 4gb
     depends_on:
       selenium-hub:
         condition: service_healthy
     deploy:
       replicas: ${NODES:-1}
-    networks:
-      - lslm_network
+    # networks:
+    #   - leafletslm_network
     ports:
       # This is only for debug. See more how disable when finish development
       # (For more than one node, don't redirect ports, expose 5900 and then give control to docker)
@@ -71,7 +53,6 @@ services:
       - "7900" # Navegador
     env_file:
       - .env
-
-networks:
-  lslm_network:
-    driver: bridge
+# networks:
+#   leafletslm_network:
+#     driver: bridge

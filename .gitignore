@@ -17,7 +17,7 @@ data/raw/*
 *.tmp*
 
 # Dagster
-.dagster/storage/
+.dagster/*
 .tmp_dagster_*
 
 # Mac OS-specific storage files
