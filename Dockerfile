@@ -5,9 +5,10 @@ ARG UID=1000
 ARG GID=1000
 
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
-ENV PATH="/workspace/.venv/bin:${PATH}"
-ENV VIRTUAL_ENV=/workspace/.venv
 ENV UV_LINK_MODE=copy
+ENV VIRTUAL_ENV="/opt/venv"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV UV_PROJECT_ENVIRONMENT="$VIRTUAL_ENV"
 
 RUN apt-get update && apt-get install -y sudo \
     git \
@@ -32,16 +33,13 @@ RUN if id -u ${USER} >/dev/null 2>&1; then \
 RUN echo "${USER} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
     chmod 0440 /etc/sudoers.d/${USER}
 
-USER ${USER}
+RUN mkdir -p /opt/venv && chown ${UID}:${GID} /opt/venv
 
+USER ${USER}
 WORKDIR /workspace
+COPY --chown=${UID}:${GID} . .
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-COPY --chown=${USER}:${USER} . .
-
-RUN uv venv ${VIRTUAL_ENV}}
-# RUN source ${VIRTUAL_ENV}/bin/activate
 RUN uv sync --all-extras --locked
 
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
@@ -49,4 +47,6 @@ RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
 
 RUN chmod -R 777 /workspace/scripts
 
-# ENTRYPOINT ["/workspace/scripts/start-dagster.sh"]
+RUN which python && python --version && which pip && whereis dagster
+
+#ENTRYPOINT ["/workspace/scripts/start-dagster.sh"]
