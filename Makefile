@@ -2,7 +2,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_NAME = leafletslm
+PROJECT_NAME = drugslm
 PYTHON_VERSION = 3.12
 PYTHON_INTERPRETER = python
 

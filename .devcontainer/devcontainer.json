@@ -1,7 +1,7 @@
 {
-  "name": "LeafletSLM DevContainer",
+  "name": "drugslm DevContainer",
   "dockerComposeFile": ["../compose.yaml"],
-  "service": "leafletslm",
+  "service": "drugslm",
   "workspaceFolder": "/workspace",
   "overrideCommand": true,
   "customizations": {

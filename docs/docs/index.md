@@ -1,4 +1,4 @@
-# leafletslm documentation!
+# drugslm documentation!
 
 ## Description
 
@@ -7,4 +7,3 @@ Consolidated repository for ETL, modeling, experiments, and deployment of the ma
 ## Commands
 
 The Makefile contains the central entry points for common tasks related to this project.
-

@@ -2,7 +2,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_NAME = leafletslm
+PROJECT_NAME = drugslm
 PYTHON_VERSION = 3.12
 PYTHON_INTERPRETER = python
 
@@ -42,7 +42,7 @@ docker-logs:
 ## View logs from main service only
 .PHONY: docker-logs-main
 docker-logs-main:
-	docker compose logs -f leafletslm
+	docker compose logs -f drugslm
 
 ## Stop and remove all containers, networks, and volumes
 .PHONY: docker-clean
@@ -53,7 +53,7 @@ docker-clean:
 ## Enter main container shell
 .PHONY: docker-shell
 docker-shell:
-	docker compose exec leafletslm bash
+	docker compose exec drugslm bash
 
 #################################################################################
 # DAGSTER COMMANDS                                                              #
@@ -143,7 +143,7 @@ clean:
 ## Make dataset
 .PHONY: data
 data: requirements
-	$(PYTHON_INTERPRETER) lslm/dataset.py
+	$(PYTHON_INTERPRETER) drugslm/dataset.py
 
 ## Build documentation
 .PHONY: docs

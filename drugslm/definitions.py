@@ -22,7 +22,7 @@ Documentation: Gemini 2.5 Pro (Student), Vinícius de Lima Gonçalves
 
 from dagster import Definitions
 
-from lslm.resources.selenium import selenium_browser
+from drugslm.resources.selenium import selenium_browser
 
 # from .jobs import anvisa_scrape_job
 

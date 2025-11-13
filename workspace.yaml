@@ -1,2 +1,2 @@
 load_from:
-  - python_module: lslm.definitions
+  - python_module: drugslm.definitions

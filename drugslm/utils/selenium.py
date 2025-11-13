@@ -27,7 +27,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import yaml
 
-from lslm.config import FIREFOX_OPTIONS, HUB_URL
+from drugslm.config import FIREFOX_OPTIONS, HUB_URL
 
 log = logging.getLogger(__name__)
 

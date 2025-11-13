@@ -22,8 +22,8 @@ from dagster import resource
 from retry import retry
 from selenium import webdriver
 
-from lslm.config import HUB_URL
-from lslm.utils.selenium import (
+from drugslm.config import HUB_URL
+from drugslm.utils.selenium import (
     get_firefox_options,
     validate_driver_connection,
 )
