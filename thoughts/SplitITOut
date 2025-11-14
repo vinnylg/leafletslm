@@ -2,9 +2,17 @@ pensando melhor, da mesma forma que não faz sentido ter o Ollama no docker-comp
 o leafletslm consome o selenium, mas nem tem porque subir ele toda hora.
 mas como de certa forma isso faz parte do ecossistema do projeto, talvez um leafletslm-services.
 
-
 outra coisa, acabei de renomear mas não estou satisfeito. Atual ta melhor, porém remete apenas a um modelo de linguagem de folhetos
 falta algo para juntar tudo
+
 - drugslm?
 
 acho que fica melhor, vou trocar
+
+Definição
+
+- Serviços essenciais para rodar o drugslm? coloca no compose.yaml. Por exemplo:
+  - postgresql e neo4j não precisam estar instalados no mesmo continer do projeto, mas faz sentido estarem no compose
+- Serviços usado apenas para desenvolvimento? podem ficar em outros composes. Por exemplo:
+  - O selenium-hub e nodes são usados apenas durante a aquisição de dados, ex drugslm.dataset.anvisa.download. Após isso:
+    - drugslm.features.anvisa.extract -> drugslm.database.generate -> .....

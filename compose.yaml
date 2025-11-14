@@ -6,53 +6,15 @@ services:
         - USER=${USER}
         - UID=${UID}
         - GID=${GID}
-    container_name: drugslm
+    image: vri/drugslm:unstable
+    # container_name: drugslm
     volumes:
       - ./:/workspace
     # networks:
     #   - drugslm_network
     ports:
-      - "3333:3000"
+      - "3000:3000"
     tty: true
+    stdin_open: true
     env_file:
       - .env
-
-  selenium-hub:
-    image: selenium/hub:4.15.0
-    container_name: drugslm-selenium
-    ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
-      interval: 10s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
-    # networks:
-    #   - drugslm_network
-    env_file:
-      - .env
-
-  selenium-firefox:
-    image: selenium/node-firefox:4.15.0
-    container_name: drugslm-firefox
-    shm_size: 4gb
-    depends_on:
-      selenium-hub:
-        condition: service_healthy
-    deploy:
-      replicas: ${NODES:-1}
-    # networks:
-    #   - drugslm_network
-    ports:
-      # This is only for debug. See more how disable when finish development
-      # (For more than one node, don't redirect ports, expose 5900 and then give control to docker)
-      # - "5900" # VNC
-      - "7900" # Navegador
-    env_file:
-      - .env
-# networks:
-#   drugslm_network:
-#     driver: bridge
