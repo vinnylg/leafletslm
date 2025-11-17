@@ -22,8 +22,9 @@ Documentation: Gemini 2.5 Pro (Student), Vinícius de Lima Gonçalves
 
 from dagster import Definitions
 
+from drugslm.loguru import setup_logging
 from drugslm.resources.selenium import selenium_browser
 
-# from .jobs import anvisa_scrape_job
+setup_logging()
 
 defs = Definitions(resources={"selenium": selenium_browser})
