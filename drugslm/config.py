@@ -8,8 +8,8 @@ from loguru import logger
 load_dotenv()
 
 HUB_URL = os.getenv("HUB_URL")
-BROWSER_NODES = int(os.getenv("BROWSER_NODES"), 0)
-logger.info(f"HUB_URL address is {HUB_URL} and have {BROWSER_NODES} browser nodes")
+#BROWSER_NODES = int(os.getenv("BROWSER_NODES"), 0)
+logger.info(f"HUB_URL address is {HUB_URL}")
 
 
 # PROJECT_ROOT = Path(__file__).resolve().parents[1]

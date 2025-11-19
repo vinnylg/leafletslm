@@ -22,8 +22,8 @@ Documentation: Gemini 2.5 Pro (Student), Vinícius de Lima Gonçalves
 
 from dagster import Definitions
 
-from drugslm.loguru import setup_logging
 from drugslm.resources.selenium import selenium_browser
+from drugslm.utils.loguru import setup_logging
 
 setup_logging()
 

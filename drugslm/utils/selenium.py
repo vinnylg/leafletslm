@@ -16,13 +16,16 @@ Documentação: Gemini 2.5 Pro (Student), Vinícius de Lima Gonçalves
 from contextlib import contextmanager
 import logging
 from pathlib import Path
+from time import sleep
 from typing import Any, Dict, Iterator
 
 from retry import retry
 from selenium import webdriver
+from selenium.common.exceptions import JavascriptException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import yaml
@@ -57,7 +60,10 @@ def managed_webdriver(browser_options) -> Iterator[WebDriver]:
     driver = None
     log.info(f"Attempting to connect to Selenium Hub at {HUB_URL}...")
     try:
-        driver = webdriver.Remote(command_executor=HUB_URL, options=browser_options)
+        driver = webdriver.Remote(
+            command_executor=HUB_URL,
+            options=browser_options,
+        )
         validate_driver_connection(driver)
 
         log.info(f"Connection successful. Session ID: {driver.session_id}")
@@ -139,3 +145,36 @@ def get_firefox_options(config_path: Path | str = FIREFOX_OPTIONS) -> FirefoxOpt
             options.set_preference(name, value)
 
     return options
+
+
+def highlight(driver: WebDriver, element: WebElement, color: str = "green") -> None:
+    """Highlights a specific WebElement by drawing a border around it.
+
+    Args:
+        driver (WebDriver): The active Selenium WebDriver instance.
+        element (WebElement): The target Selenium WebElement instance.
+        color (str, optional): The colour to highlight. Defaults to "green".
+    """
+    try:
+        driver.execute_script(f"arguments[0].style.border='3px solid {color}';", element)
+        sleep(1)
+
+    except JavascriptException:
+        pass  #! Fail silently if highlighting isn't critical
+
+
+def scroll(driver: WebDriver, element: WebElement) -> None:
+    """Scrolls the page to bring the specified WebElement into view.
+
+    Args:
+        driver (WebDriver): The active Selenium WebDriver instance.
+        element (WebElement): The target Selenium WebElement instance.
+    """
+    try:
+        driver.execute_script(
+            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element
+        )
+        sleep(1)
+
+    except JavascriptException:
+        pass  #! Fail silently if highlighting isn't critical

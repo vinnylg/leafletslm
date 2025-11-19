@@ -4,6 +4,7 @@ ARG USER=devel
 ARG UID=1000
 ARG GID=1000
 
+ENV TERM=xterm-256color
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
 ENV UV_LINK_MODE=copy
 ENV VIRTUAL_ENV="/opt/venv"
@@ -43,7 +44,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN uv sync --all-extras --locked
 
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
-    echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
+    echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc && \
+    echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
 
 RUN chmod -R 777 /workspace/scripts
 
