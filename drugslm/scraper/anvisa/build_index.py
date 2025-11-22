@@ -24,13 +24,13 @@ Documentation: Gemini 2.5 Pro (Student), Vinícius de Lima Gonçalves
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+import logging
 from pathlib import Path
 from time import sleep
 from typing import Tuple
 
 from bs4 import BeautifulSoup
 from filelock import FileLock
-from loguru import logger
 import pandas as pd
 from retry import retry
 from selenium.webdriver.common.by import By
@@ -39,16 +39,17 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from drugslm.dataset.anvisa.config import (
+from drugslm.scraper.anvisa.config import (
     CATEGORIES,
     CATEGORIES_DIR,
     CATEGORIES_URL,
     OUTPUT_DIR,
     SEARCH_COLUMNS,
 )
-from drugslm.resources.selenium import get_firefox_options, managed_webdriver
+from drugslm.scraper.selenium import get_firefox_options, highlight, scroll, webdriver_manager
 from drugslm.utils.asserts import assert_text_number
-from drugslm.utils.selenium import highlight, scroll
+
+logger = logging.getLogger(__name__)
 
 # ====== CONSTANTS ======
 
@@ -386,7 +387,7 @@ def process_single_category(category_id: int) -> None:
     options = get_firefox_options()
 
     try:
-        with managed_webdriver(options) as driver:
+        with webdriver_manager(options) as driver:
             process_category_pages(driver, category_id)
     except Exception as e:
         logger.exception(f"Process failed for Category {category_id}: {e}")
@@ -413,8 +414,11 @@ if __name__ == "__main__":
     import typer
     from typing_extensions import Annotated
 
-    #from drugslm.config import BROWSER_NODES
-    from drugslm.utils.loguru import get_log_path, setup_logging
+    # from drugslm.config import BROWSER_NODES
+    from drugslm.utils.logging import get_log_path, setup_logging
+
+    log_file_path = get_log_path(__file__)
+    setup_logging(log_file_path)
 
     BROWSER_NODES = 1
 
@@ -444,10 +448,6 @@ if __name__ == "__main__":
         """
         Runs the ANVISA drug listing scraper.
         """
-
-        log_file_path = get_log_path(__file__)
-        setup_logging(log_file_path)
-
         threads_to_use = n_threads or BROWSER_NODES
 
         try:

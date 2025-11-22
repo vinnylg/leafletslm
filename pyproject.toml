@@ -20,7 +20,6 @@ requires-python = "~=3.12.0"
 dependencies = [
     "beautifulsoup4>=4.14.2",
     "dagster==1.12.1",
-    "loguru>=0.7.0",
     "ollama>=0.6.0",
     "pandas>=2.3.3",
     "python-dotenv>=1.0.0",

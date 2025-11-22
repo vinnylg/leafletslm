@@ -38,11 +38,13 @@
       ],
 
       "settings": {
+        "settingsSync.ignoredExtensions": true,
         "[python]": {
           "editor.formatOnSave": true,
           "editor.defaultFormatter": "charliermarsh.ruff",
-          // "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
-          "python.terminal.activateEnvironment": true
+          "python.defaultInterpreterPath": "/opt/venv/bin/python",
+          "python.terminal.activateEnvironment": true,
+          "python.analysis.diagnosticMode": "workspace"
         },
 
         "editor.defaultFormatter": "esbenp.prettier-vscode",

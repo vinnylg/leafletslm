@@ -1,14 +1,16 @@
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from loguru import logger
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file if it exists
 load_dotenv()
 
 HUB_URL = os.getenv("HUB_URL")
-#BROWSER_NODES = int(os.getenv("BROWSER_NODES"), 0)
+# BROWSER_NODES = int(os.getenv("BROWSER_NODES"), 0)
 logger.info(f"HUB_URL address is {HUB_URL}")
 
 
@@ -28,7 +30,7 @@ REPORTS_DIR = PROJECT_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 LOG_DIR = PROJECT_ROOT / "logs"
 
-SETTINGS_DIR = PROJECT_ROOT / "settings"
+SETTINGS_DIR = PROJECT_ROOT / "drugslm" / "configs"
 FIREFOX_OPTIONS = SETTINGS_DIR / "firefox.yaml"
 
 [
@@ -48,12 +50,12 @@ FIREFOX_OPTIONS = SETTINGS_DIR / "firefox.yaml"
 ]
 
 
-# If tqdm is installed, configure loguru with tqdm.write
-# https://github.com/Delgan/loguru/issues/135
-try:
-    from tqdm import tqdm
+# # If tqdm is installed, configure loguru with tqdm.write
+# # https://github.com/Delgan/loguru/issues/135
+# try:
+#     from tqdm import tqdm
 
-    logger.remove(0)
-    logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
-except ModuleNotFoundError:
-    pass
+#     logger.remove(0)
+#     logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
+# except ModuleNotFoundError:
+#     pass
