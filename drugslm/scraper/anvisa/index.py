@@ -299,7 +299,7 @@ def save_category_pages(category_id: int, pages: dict, saved_size: int) -> None:
         saved_size (int): Number of rows saved in this step.
     """
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output = OUTPUT_DIR / "categories_tables_progress.csv"
+    output = CATEGORIES_DIR / "index_progress.csv"
     lock_path = output.with_suffix(".csv.lock")
 
     with FileLock(lock_path):
@@ -393,14 +393,18 @@ def process_single_category(category_id: int) -> None:
         logger.exception(f"Process failed for Category {category_id}: {e}")
 
 
-def build_index_sequential() -> None:
-    """Runs scraping sequentially for all categories."""
-    for cat_id in CATEGORIES:
-        process_single_category(cat_id)
+def build(n_threads: int = 1):
+    """
+    Runs scraping in n_threads
 
+    Args:
+        n_threads (int, optional): Number of Thread to split. Defaults to 1.
+    """
+    if n_threads <= 0:
+        n_threads = 1
+    elif n_threads > len(CATEGORIES):
+        n_threads = len(CATEGORIES)
 
-def build_index_parallel(n_threads: int) -> None:
-    """Runs scraping in parallel."""
     logger.info(f"Starting pool with {n_threads} workers.")
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
         executor.map(process_single_category, CATEGORIES)
@@ -429,35 +433,28 @@ if __name__ == "__main__":
 
     @app.command()
     def run(
-        parallel: Annotated[
-            bool,
-            typer.Option(
-                "--parallel",
-                help="Run extraction in parallel. (Default: sequential)",
-            ),
-        ] = False,
         n_threads: Annotated[
             Optional[int],
             typer.Option(
-                "--nthreads",
-                help=f"Number of BROWSERS for parallel mode. (Default: {BROWSER_NODES} from BROWSER_NODES)",
+                "-n",
+                help="Number of THREADS for parallel mode. Default: 1 (sequential)"
+                "CAUTION: if the number of threads is greater than the number of available browsers, the threads were waiting for the selenium hub ",
                 min=1,
+                max=len(CATEGORIES),
             ),
-        ] = None,
+        ] = 1,
     ):
         """
         Runs the ANVISA drug listing scraper.
         """
-        threads_to_use = n_threads or BROWSER_NODES
 
         try:
-            if parallel:
-                logger.info(f"Execution mode: Parallel (n_threads={threads_to_use})")
-                build_index_parallel(n_threads=threads_to_use)
-
+            if n_threads > 1:
+                logger.info(f"Execution mode: Parallel (n_threads={n_threads})")
             else:
                 logger.info("Execution mode: Sequential")
-                build_index_sequential()
+
+            build(n_threads)
 
             logger.info(f"Execution complete. Log: {log_file_path.resolve()}")
 

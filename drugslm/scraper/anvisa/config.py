@@ -1,4 +1,4 @@
-from drugslm.config import EXTERNAL_DATA_DIR, LOG_DIR, RAW_DATA_DIR
+from drugslm.config import EXECUTION_ID, EXTERNAL_DATA_DIR, LOG_DIR, RAW_DATA_DIR
 
 DADOS_ABERTOS_OUTPUT = EXTERNAL_DATA_DIR / "DADOS_ABERTOS_MEDICAMENTOS.csv"
 DADOS_ABERTOS_URL = "https://dados.anvisa.gov.br/dados/DADOS_ABERTOS_MEDICAMENTOS.csv"
@@ -13,7 +13,7 @@ OUTPUT_DIR = RAW_DATA_DIR / "anvisa"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-CATEGORIES_DIR = OUTPUT_DIR / "categories_list"
+CATEGORIES_DIR = OUTPUT_DIR / "index" / EXECUTION_ID
 CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
 
 CATEGORIES_URL = "https://consultas.anvisa.gov.br/#/bulario/q/?categoriasRegulatorias=%s"

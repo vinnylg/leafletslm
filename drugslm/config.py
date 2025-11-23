@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import os
 from pathlib import Path
@@ -48,6 +49,8 @@ FIREFOX_OPTIONS = SETTINGS_DIR / "firefox.yaml"
         SETTINGS_DIR,
     ]
 ]
+
+EXECUTION_ID = datetime.now().strftime("%Y%m%d%H%M%S")
 
 
 # # If tqdm is installed, configure loguru with tqdm.write
