@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 import os
 from pathlib import Path
@@ -31,27 +30,25 @@ REPORTS_DIR = PROJECT_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 LOG_DIR = PROJECT_ROOT / "logs"
 
-SETTINGS_DIR = PROJECT_ROOT / "drugslm" / "configs"
-FIREFOX_OPTIONS = SETTINGS_DIR / "firefox.yaml"
 
-[
-    d.mkdir(exist_ok=True)
-    for d in [
-        DATA_DIR,
-        RAW_DATA_DIR,
-        INTERIM_DATA_DIR,
-        PROCESSED_DATA_DIR,
-        EXTERNAL_DATA_DIR,
-        MODELS_DIR,
-        REPORTS_DIR,
-        FIGURES_DIR,
-        LOG_DIR,
-        SETTINGS_DIR,
-    ]
-]
+# REMOVE IT
+FIREFOX_OPTIONS = PROJECT_ROOT / "drugslm" / "scraper" / "firefox.yaml"
 
-EXECUTION_ID = datetime.now().strftime("%Y%m%d%H%M%S")
 
+# [
+#     d.mkdir(exist_ok=True)
+#     for d in [
+#         DATA_DIR,
+#         RAW_DATA_DIR,
+#         INTERIM_DATA_DIR,
+#         PROCESSED_DATA_DIR,
+#         EXTERNAL_DATA_DIR,
+#         MODELS_DIR,
+#         REPORTS_DIR,
+#         FIGURES_DIR,
+#         LOG_DIR,
+#     ]
+# ]
 
 # # If tqdm is installed, configure loguru with tqdm.write
 # # https://github.com/Delgan/loguru/issues/135

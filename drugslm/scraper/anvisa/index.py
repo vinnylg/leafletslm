@@ -41,8 +41,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from drugslm.scraper.anvisa.config import (
     CATEGORIES,
-    CATEGORIES_DIR,
     CATEGORIES_URL,
+    INDEX_DIR,
     OUTPUT_DIR,
     SEARCH_COLUMNS,
 )
@@ -56,7 +56,6 @@ logger = logging.getLogger(__name__)
 XPATH_PAGINATION = "//ul[contains(@class, 'pagination')]"
 XPATH_current_page = f"{XPATH_PAGINATION}//li[contains(@class, 'active')]//a"
 XPATH_LAST_PAGE = f"{XPATH_PAGINATION}//a[contains(@ng-switch-when, 'last')]"
-
 
 # ====== Helpers (Primitives) ======
 
@@ -140,6 +139,7 @@ def get_pages(driver: WebDriver) -> Tuple[dict, WebElement]:
         Tuple[dict, WebElement]: A tuple containing:
             - dict: A dictionary with keys 'current', 'next', and 'last' (all integers).
             - WebElement: The Selenium element corresponding to the *next* page button.
+            - WebElement: The Selenium element corresponding to the *last* page button.
     """
     try:
         pagination = WebDriverWait(driver, 10).until(
@@ -162,11 +162,15 @@ def get_pages(driver: WebDriver) -> Tuple[dict, WebElement]:
             f"Captured pagination. Current {current_page_number}, Last {last_page_number} and Next {next_page_number} found"
         )
 
-        return {
-            "current": current_page_number,
-            "next": next_page_number,
-            "last": last_page_number,
-        }, next_page
+        return (
+            {
+                "current": current_page_number,
+                "next": next_page_number,
+                "last": last_page_number,
+            },
+            next_page,
+            last_page,
+        )
 
     except Exception as e:
         logger.error(f"Failed to get pagination details: {e}")
@@ -257,7 +261,7 @@ def save_data(data: list, category_id: int, page_num: int) -> int:
     Returns:
         int: The number of rows saved.
     """
-    output_path = CATEGORIES_DIR / f"{category_id}_{page_num}.pkl"
+    output_path = INDEX_DIR / f"{category_id}_{page_num}.pkl"
 
     df = pd.DataFrame(data=data, columns=SEARCH_COLUMNS)
     df.to_pickle(output_path)
@@ -273,10 +277,10 @@ def join_category_pages() -> Path:
     Returns:
         Path: The path to the consolidated file, or None if no files found.
     """
-    all_files = list(CATEGORIES_DIR.glob("*.pkl"))
+    all_files = list(INDEX_DIR.glob("*.pkl"))
 
     if not all_files:
-        logger.warning("No pickle files found to consolidate in CATEGORIES_DIR.")
+        logger.warning("No pickle files found to consolidate in INDEX_DIR.")
         return None
 
     # ignore_index=True recria o índice de 0 a N, evitando duplicatas de índices das páginas
@@ -299,7 +303,7 @@ def save_category_pages(category_id: int, pages: dict, saved_size: int) -> None:
         saved_size (int): Number of rows saved in this step.
     """
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output = CATEGORIES_DIR / "index_progress.csv"
+    output = INDEX_DIR / "index_progress.csv"
     lock_path = output.with_suffix(".csv.lock")
 
     with FileLock(lock_path):
@@ -316,7 +320,7 @@ def save_category_pages(category_id: int, pages: dict, saved_size: int) -> None:
 # ====== Core Business Logic (Process) ======
 
 
-def process_category_pages(driver: WebDriver, category_id: int) -> None:
+def scrap_pages(driver: WebDriver, category_id: int) -> None:
     """
     Iterates through all pages of a specific regulatory category, extracting and saving data.
 
@@ -333,7 +337,7 @@ def process_category_pages(driver: WebDriver, category_id: int) -> None:
     logger.info(f"Accessing ANVISA search page: {url}")
     driver.get(url)
 
-    pages, next_button = get_pages(driver)
+    pages, next_button, _ = get_pages(driver)
     logger.info(f"Pagination found. Last page: {pages['last']}")
 
     while pages["current"] <= pages["last"]:
@@ -362,7 +366,7 @@ def process_category_pages(driver: WebDriver, category_id: int) -> None:
         next_button.click()
         sleep(1)
 
-        pages, next_button = get_pages(driver)
+        pages, next_button, _ = get_pages(driver)
         sleep(1)
 
         if previous_page == pages["current"]:
@@ -373,29 +377,188 @@ def process_category_pages(driver: WebDriver, category_id: int) -> None:
 
     logger.info(f"Category {category_id} processing complete. Total rows saved: {search_size}")
 
+    return pages["current"], search_size
+
+
+def fetch_category_page(driver: WebDriver, category_id: int) -> list:
+    """
+    Navigates to the first and last page of a category to estimate data volume.
+
+    Args:
+        driver (WebDriver): The active Selenium WebDriver instance.
+        category_id (int): The regulatory category ID.
+
+    Returns:
+        list: [category_id, total_pages, estimated_total_items].
+    """
+    url = CATEGORIES_URL % str(category_id)
+    logger.info(f"Fetching metadata for Category {category_id} | URL: {url}")
+
+    driver.get(url)
+
+    try:
+        pages, _, last_button = get_pages(driver)
+    except Exception:
+        logger.warning(f"Category {category_id}: Pagination not found or empty. Assuming 0 items.")
+        return [category_id, 0, 0]
+
+    table1 = find_table(driver)
+    data1 = table2data(table1)
+    page_size = len(data1)
+
+    if pages["last"] > 1:
+        logger.debug(f"Category {category_id}: Jumping to last page ({pages['last']})...")
+        last_button.click()
+        sleep(1)
+
+        table2 = find_table(driver)
+        data2 = table2data(table2)
+        last_page_items = len(data2)
+    else:
+        last_page_items = page_size
+
+    total_items = ((pages["last"] - 1) * page_size) + last_page_items
+
+    logger.info(
+        f"Category {category_id} Stats: Pages={pages['last']} | "
+        f"PageSize={page_size} | Total={total_items}"
+    )
+
+    return [
+        category_id,
+        pages["last"],
+        total_items,
+    ]
+
+
+def fetch_categories(driver: WebDriver) -> pd.DataFrame:
+    """
+    Orchestrates metadata fetching for all categories listed in CATEGORIES.
+
+    Args:
+        driver (WebDriver): The active Selenium WebDriver instance.
+
+    Returns:
+        pd.DataFrame: DataFrame containing statistics for all categories.
+    """
+    fetch_columns = [
+        "category_id",
+        "npages",
+        "category_size",
+    ]
+    fetch_values = []
+    output_path = INDEX_DIR / "fetched_categories.csv"
+
+    logger.info("--- Starting Fetch Routine for All Categories ---")
+
+    try:
+        for category_id in CATEGORIES:
+            try:
+                stats = fetch_category_page(driver, category_id)
+                fetch_values.append(stats)
+            except Exception as e:
+                logger.error(f"Failed to fetch metadata for Category {category_id}: {e}")
+                # Fallback: id, 0 pages, 0 size
+                fetch_values.append([category_id, 0, 0])
+
+        fetch_df = pd.DataFrame(fetch_values, columns=fetch_columns)
+        fetch_df.to_csv(output_path, index=False)
+
+        logger.info(f"Fetch complete. Metadata saved to {output_path}")
+        return fetch_df
+
+    except Exception as e:
+        logger.critical(f"Critical error during categories fetch: {e}")
+        return None
+
+
+def get_fetched(category_id: int | None = None) -> pd.DataFrame | int | None:
+    """
+    Loads the categories metadata file. Returns the whole DF or specific category size.
+
+    Args:
+        category_id (int | None): Optional ID to filter specific size.
+
+    Returns:
+        pd.DataFrame | int | None: DataFrame if no ID passed, int if ID found, None if file missing.
+    """
+    file_path = INDEX_DIR / "fetched_categories.csv"
+
+    if not file_path.exists():
+        logger.warning(f"Fetch file not found at {file_path}. Returning None.")
+        return None
+
+    try:
+        df = pd.read_csv(file_path)
+
+        if category_id is None:
+            logger.info(f"Loaded fetched categories metadata ({len(df)} records).")
+            return df
+
+        # Filter for specific category
+        row = df.loc[df["category_id"] == category_id, "category_size"]
+
+        if row.empty:
+            logger.warning(f"Category {category_id} not found in fetch file.")
+            return None
+
+        return int(row.iloc[0])
+
+    except Exception as e:
+        logger.error(f"Error reading fetched categories CSV: {e}")
+        return None
+
 
 # ====== Orchestration (Execution) ======
 
 
-def process_single_category(category_id: int) -> None:
+def execute_fetch() -> pd.DataFrame | None:
     """
-    Orchestrates the scraping of a single category.
-    Manages the WebDriver lifecycle.
+    Manages the WebDriver lifecycle for the fetch step.
+    """
+    options = get_firefox_options()
+    logger.info("--- Setup Fetch Execution ---")
+
+    try:
+        with webdriver_manager(options) as driver:
+            return fetch_categories(driver)
+    except Exception as e:
+        logger.critical(f"Fatal error during fetch execution wrapper: {e}")
+        return None
+
+
+def process_category(category_id: int) -> None:
+    """
+    Orchestrates the scraping of a single category with pre-fetch validation.
     """
     logger.info(f"--- Starting Process for Category {category_id} ---")
+
+    # Check against fetched metadata
+    expected_size = get_fetched(category_id)
+
+    if expected_size is None:
+        logger.info(f"No fetch metadata available for Category {category_id}. Proceeding blindly.")
+    elif expected_size == 0:
+        logger.warning(f"Skipping Category {category_id}: Fetch indicates 0 items.")
+        return
+    else:
+        logger.info(f"Category {category_id}: Expecting {expected_size} items.")
 
     options = get_firefox_options()
 
     try:
         with webdriver_manager(options) as driver:
-            process_category_pages(driver, category_id)
+            scrap_pages(driver, category_id)
     except Exception as e:
         logger.exception(f"Process failed for Category {category_id}: {e}")
 
 
-def build(n_threads: int = 1):
+def process_categories(n_threads: int = 1):
     """
-    Runs scraping in n_threads
+    Runs scraping in n_threads using a ThreadPoolExecutor.
+
+    This acts as a dynamic load balancer: as soon as a thread finishes
+    a category, it picks up the next available one from the queue.
 
     Args:
         n_threads (int, optional): Number of Thread to split. Defaults to 1.
@@ -405,61 +568,103 @@ def build(n_threads: int = 1):
     elif n_threads > len(CATEGORIES):
         n_threads = len(CATEGORIES)
 
-    logger.info(f"Starting pool with {n_threads} workers.")
+    logger.info(f"Starting pool with {n_threads} workers for {len(CATEGORIES)} categories.")
+
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
-        executor.map(process_single_category, CATEGORIES)
+        executor.map(process_category, CATEGORIES)
 
 
 # ====== SCRIPT ENTRY POINT ======
 
 if __name__ == "__main__":
-    from typing import Optional
-
     import typer
     from typing_extensions import Annotated
 
-    # from drugslm.config import BROWSER_NODES
     from drugslm.utils.logging import get_log_path, setup_logging
 
+    # Configuração inicial de Logs
     log_file_path = get_log_path(__file__)
     setup_logging(log_file_path)
-
-    BROWSER_NODES = 1
 
     app = typer.Typer(
         help="CLI for scraping drug data from ANVISA.",
         pretty_exceptions_show_locals=False,
+        add_completion=False,
     )
 
     @app.command()
     def run(
         n_threads: Annotated[
-            Optional[int],
+            int,
             typer.Option(
-                "-n",
-                help="Number of THREADS for parallel mode. Default: 1 (sequential)"
-                "CAUTION: if the number of threads is greater than the number of available browsers, the threads were waiting for the selenium hub ",
+                "--threads",
+                "-t",
+                help="Number of threads for parallel processing (Process Step only).",
                 min=1,
                 max=len(CATEGORIES),
+                show_default=True,
             ),
         ] = 1,
+        only_fetch: Annotated[
+            bool,
+            typer.Option(
+                "--only-fetch",
+                "-o",
+                help="EXECUTE ONLY FETCH: Runs metadata fetching and exits.",
+                show_default=False,
+            ),
+        ] = False,
+        skip_fetch: Annotated[
+            bool,
+            typer.Option(
+                "--skip-fetch",
+                "-s",
+                help="EXECUTE ONLY PROCESS: Skips metadata fetching and uses existing CSV.",
+                show_default=False,
+            ),
+        ] = False,
     ):
         """
-        Runs the ANVISA drug listing scraper.
+        Runs the ANVISA drug listing scraper pipeline.
+
+        Modes:
+        1. Default: Fetch Metadata -> Scrape Data
+        2. --only-fetch (-o): Fetch Metadata -> Stop
+        3. --skip-fetch (-s): Skip Metadata -> Scrape Data
         """
 
+        if only_fetch and skip_fetch:
+            logger.error(
+                "Ambiguous command: You cannot use --only-fetch (-o) and --skip-fetch (-s) simultaneously."
+            )
+            raise typer.Exit(code=1)
+
         try:
-            if n_threads > 1:
-                logger.info(f"Execution mode: Parallel (n_threads={n_threads})")
+            if not skip_fetch:
+                logger.info("STEP 1: Fetching Categories Metadata...")
+                execute_fetch()
             else:
-                logger.info("Execution mode: Sequential")
+                logger.info("STEP 1: Skipped (User Request: --skip-fetch).")
 
-            build(n_threads)
+            if only_fetch:
+                logger.info("Execution finished (--only-fetch selected).")
+                raise typer.Exit(code=0)
 
-            logger.info(f"Execution complete. Log: {log_file_path.resolve()}")
+            mode_label = "Parallel" if n_threads > 1 else "Sequential"
+            logger.info(
+                f"STEP 2: Processing Categories (Mode: {mode_label}, Threads: {n_threads})..."
+            )
 
+            process_categories(n_threads)
+
+            join_category_pages()
+
+            logger.info(f"Pipeline execution complete. Log: {log_file_path.resolve()}")
+
+        except typer.Exit:
+            raise
         except Exception as e:
-            logger.exception(f"Fatal error during execution {e}. Log: {log_file_path.resolve()}")
+            logger.exception(f"Fatal error during pipeline execution: {e}")
             raise typer.Exit(code=1)
 
     app()
