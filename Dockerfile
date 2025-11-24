@@ -4,6 +4,9 @@ ARG USER=devel
 ARG UID=1000
 ARG GID=1000
 
+EXPOSE 3000
+EXPOSE 8000
+
 ENV TERM=xterm-256color
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
 ENV UV_LINK_MODE=copy
@@ -51,4 +54,4 @@ RUN chmod -R 777 /workspace/scripts
 
 RUN which python && python --version && which pip && whereis dagster
 
-ENTRYPOINT ["/workspace/scripts/start-dagster.sh"]
+ENTRYPOINT ["make", "dagster-start"]

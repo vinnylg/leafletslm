@@ -6,7 +6,7 @@ services:
         - USER=${USER}
         - UID=${UID}
         - GID=${GID}
-    image: vri/drugslm:unstable
+    image: vri/drugslm:0.0.1
     container_name: drugslm
     volumes:
       - ./:/workspace
@@ -14,11 +14,11 @@ services:
     #   - drugslm
     ports:
       - "3000:3000"
+      - "8000:8000"
     tty: true
     stdin_open: true
     env_file:
       - .env
-
 # networks:
 #   drugslm_net:
 #     name: drugslm
