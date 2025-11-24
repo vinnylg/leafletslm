@@ -1,4 +1,27 @@
-site_name: drugslm
-#
+site_name: DrugsLM Documentation
 site_author: Vinícius de Lima Gonçalves
-#
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [..]
+          options:
+            show_source: true
+            show_root_heading: true
+  - kroki:
+      ServerURL: http://kroki.lilith.hell/
+      FencePrefix: ""
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Reference: reference.md
+  - Architecture: architecture.md
