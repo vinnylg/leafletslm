@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from typing import Optional, Union
 
-from drugslm.config import EXECUTION_ID, LOG_DIR, PROJECT_ROOT
+from drugslm.config import LOG_DIR, PROJECT_ROOT
 
 # Try to import tqdm to use its thread-safe write method
 try:
@@ -105,7 +105,7 @@ def setup_logging(log_file_path: Optional[Union[str, Path]] = None) -> logging.L
         # RotatingFileHandler: Keeps 5 files of 10MB each
         file_handler = logging.handlers.RotatingFileHandler(
             log_path,
-            # maxBytes=10 * 1024 * 1024,  # 10 MB
+            maxBytes=10 * 1024 * 1024,  # 10 MB
             backupCount=10,
             encoding="utf-8",
         )
@@ -121,7 +121,7 @@ def setup_logging(log_file_path: Optional[Union[str, Path]] = None) -> logging.L
     return root_logger
 
 
-def get_log_path(script_file: Union[str, Path], timestamp: str = EXECUTION_ID) -> Path:
+def get_log_path(script_file: Union[str, Path]) -> Path:
     """
     Generates a log file path mirroring the script's structure within the logs directory.
 
@@ -145,5 +145,7 @@ def get_log_path(script_file: Union[str, Path], timestamp: str = EXECUTION_ID) -
     # Mirror structure: logs / path / to / script_name / timestamp.log
     # Using parent / stem ensures "my_script.py" becomes a folder "my_script"
     log_subdir_structure = relative_path.parent / relative_path.stem
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
     return LOG_DIR / log_subdir_structure / f"{timestamp}.log"

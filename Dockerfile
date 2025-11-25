@@ -52,8 +52,7 @@ RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
 
-RUN chmod -R 777 /workspace/scripts
+RUN which python && python --version && python -c "import drugslm; print(f'{drugslm}')"
 
-RUN which python && python --version && which pip && whereis dagster
-
-ENTRYPOINT ["make", "dagster-start"]
+# ENTRYPOINT ["make", "dagster-up"]
+ENTRYPOINT ["sleep", "infinity"]

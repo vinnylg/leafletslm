@@ -35,7 +35,7 @@ clean:
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name ".ruff_cache" -delete
 	find . -type d -name ".pytest_cache" -delete
-	find . -type d -name "*.tmp*" -exec rm -rf {} \;
+# 	find . -type d -name "*.tmp*" -exec rm -rf {} \;
 
 ## Lint using ruff (check only)
 .PHONY: lint
@@ -59,18 +59,18 @@ test:
 #################################################################################
 
 ## Start Dagster dev server (Docker Entrypoint)
-.PHONY: dagster-start
-dagster-start:
+.PHONY: dagster-up
+dagster-up:
 	dagster dev -h 0.0.0.0 -p 3000
 
 ## Stop Dagster dev server
-.PHONY: dagster-stop
-dagster-stop:
+.PHONY: dagster-down
+dagster-down:
 	pkill -f "dagster dev" || echo "Dagster not running"
 
 ## Restart Dagster dev server
 .PHONY: dagster-restart
-dagster-restart: dagster-stop dagster-start
+dagster-restart: dagster-down dagster-up
 
 #################################################################################
 # DOCUMENTATION                                                                 #
