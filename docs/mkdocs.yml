@@ -6,6 +6,7 @@ theme:
   features:
     - navigation.sections
     - content.code.copy
+    - navigation.indexes
 
 plugins:
   - search
@@ -23,5 +24,18 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - API Reference: reference.md
   - Architecture: architecture.md
+  - Docs:
+      - reference/reference.md
+      - scraper:
+          - anvisa:
+              - reference/scraper/anvisa/anvisa.md
+              - build_index: reference/scraper/anvisa/build_index.md
+              - pipelines: reference/scraper/anvisa/pipelines.md
+              - config: reference/scraper/anvisa/config.md
+          - selenium: reference/scraper/selenium.md
+#
+# !TODO: not working because docker inotify?
+# watch:
+#   - ../drugslm
+#   - .

@@ -65,7 +65,7 @@ def table2data(element: WebElement) -> list:
     Parses the HTML table element and extracts rows into a list of data.
 
     Args:
-        element (WebElement): The Selenium WebElement containing the <table>.
+        element (WebElement): The Selenium WebElement containing the `<table>`.
 
     Returns:
         list: A list of lists [medicamento, link, empresa, expediente, data_pub].
@@ -79,7 +79,7 @@ def table2data(element: WebElement) -> list:
         table = soup.find("table")
 
         if not table:
-            logger.error("Parsing failed: No <table> tag found in the provided element.")
+            logger.error("Parsing failed: No `<table>` tag found in the provided element.")
             return []
 
         data = []
@@ -223,7 +223,7 @@ def find_table(driver: WebDriver) -> WebElement:
         driver (WebDriver): The active Selenium WebDriver instance.
 
     Returns:
-        WebElement: The found <table> element.
+        WebElement: The found `<table>` element.
 
     Raises:
         TimeoutException: If the table is not found within the timeout period (after retries).

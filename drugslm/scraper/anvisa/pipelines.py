@@ -10,7 +10,7 @@ from dagster import (
 )
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from drugslm.scraper.anvisa.index import (
+from drugslm.scraper.anvisa.build_index import (
     fetch_categories,
     get_fetched,
     join_category_pages,
