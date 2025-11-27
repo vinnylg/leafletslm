@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from drugslm.config import EXTERNAL_DATA_DIR, RAW_DATA_DIR
 
 DADOS_ABERTOS_OUTPUT = EXTERNAL_DATA_DIR / "anvisa" / "dados_abertos.csv"
@@ -8,15 +6,9 @@ DADOS_ABERTOS_URL = "https://dados.anvisa.gov.br/dados/DADOS_ABERTOS_MEDICAMENTO
 BULA_PROFISSIONAL = "produto.idBulaProfissionalProtegido"
 BULA_PACIENTE = "produto.idBulaPacienteProtegido"
 
-# ANVISA_LOG_DIR = LOG_DIR / "scraper" / "anvisa"
-# ANVISA_LOG_DIR.mkdir(parents=True, exist_ok=True)
+ANVISA_DIR = RAW_DATA_DIR / "anvisa"
 
-OUTPUT_DIR = RAW_DATA_DIR / "anvisa"
-# OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-EXECUTION_ID = datetime.now().strftime("%Y%m%d%H%M%S")
-INDEX_DIR = OUTPUT_DIR / "index" / EXECUTION_ID
-INDEX_DIR.mkdir(parents=True, exist_ok=True)
+INDEX_DIR = ANVISA_DIR / "index"
 
 CATEGORIES_URL = "https://consultas.anvisa.gov.br/#/bulario/q/?categoriasRegulatorias=%s"
 
