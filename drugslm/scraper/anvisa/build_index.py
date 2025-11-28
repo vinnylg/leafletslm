@@ -4,7 +4,7 @@ Scraper of Drugs Leaflets from the ANVISA website - Search and List
 
 This module performs the sequential or parallel extraction of drugs returned
 by the search by category, navigating through the interface and listing them
-with their URLs to get more information and download them later
+with their URLs to get more information and download them later.
 
 Execution Flow:
     1. Connects to remote Selenium Hub (Firefox)
@@ -19,7 +19,7 @@ Prerequisites:
 
 
 Author: Vinícius de Lima Gonçalves
-Documentation: Gemini 2.5 Pro (Student), Vinícius de Lima Gonçalves
+Documentation: Gemini 3.0 Pro (Student), Vinícius de Lima Gonçalves
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -45,6 +45,7 @@ from typing_extensions import Annotated
 from drugslm.scraper.anvisa.config import (
     CATEGORIES,
     CATEGORIES_URL,
+    FETCH_COLUMNS,
     INDEX_DIR,
     SEARCH_COLUMNS,
 )
@@ -53,14 +54,11 @@ from drugslm.utils.asserts import assert_text_number
 
 logger = logging.getLogger(__name__)
 
-# from selenium.common.exceptions import WebDriverException
-
 # ====== CONSTANTS ======
 
 XPATH_PAGINATION = "//ul[contains(@class, 'pagination')]"
 XPATH_CURRENT_PAGE = f"{XPATH_PAGINATION}//li[contains(@class, 'active')]//a"
 XPATH_LAST_PAGE = f"{XPATH_PAGINATION}//a[contains(@ng-switch-when, 'last')]"
-
 XPATH_PAGE_COUNT = "//div[contains(@class, 'ng-table-counts')]"
 
 # ====== OUTPUTS ======
@@ -74,7 +72,7 @@ INDEX_TABLE = INDEX_DIR / "final_table.pkl"
 # ====== Helpers (Primitives) ======
 
 
-def set_max_table_size(driver: WebDriver) -> None:
+def set_max_table_size(driver: WebDriver) -> int:
     """
     Attempts to select the highest available "items per page" option (e.g., 50).
     Iterates through options in reverse order.
@@ -84,6 +82,9 @@ def set_max_table_size(driver: WebDriver) -> None:
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
+
+    Returns:
+        int: The selected page size. Returns 0 if failed.
     """
     try:
         container = WebDriverWait(driver, 15).until(
@@ -94,26 +95,29 @@ def set_max_table_size(driver: WebDriver) -> None:
 
         if not buttons:
             logger.warning("Pagination count container found, but no buttons were visible.")
-            return
+            return 0
 
         for btn in reversed(buttons):
             try:
+                txt_val = btn.text.strip()
                 if "active" in btn.get_attribute("class"):
-                    logger.info(f"Max page count already active: {btn.text}")
-                    return int(btn.text.strip())
+                    logger.info(f"Max page count already active: {txt_val}")
+                    return int(txt_val)
 
                 btn.click()
-                logger.info(f"Successfully set page count to: {btn.text}")
-                return int(btn.text.strip())
+                logger.info(f"Successfully set page count to: {txt_val}")
+                return int(txt_val)
 
             except WebDriverException as e:
                 logger.warning(
                     f"Failed to click page count option '{btn.text}'. Trying previous option. Error: {e}"
                 )
                 continue
+        return 0
 
     except Exception as e:
-        logger.critical(f"element for set_max_table_size not found: {e}")
+        logger.critical(f"Element for set_max_table_size not found: {e}")
+        return 0
 
 
 def table2data(element: WebElement) -> list:
@@ -124,8 +128,7 @@ def table2data(element: WebElement) -> list:
         element (WebElement): The Selenium WebElement containing the `<table>`.
 
     Returns:
-        list: A list of lists [medicamento, link, empresa, expediente, data_pub].
-        Returns an empty list if no table is found or parsing fails.
+        list: A list of lists [medicamento, link, empresa, expediente, data_pub] or an empty list [].
     """
     try:
         logger.debug("Starting table HTML parsing...")
@@ -305,12 +308,12 @@ def find_table(driver: WebDriver) -> WebElement:
 # ====== I/O & Persistence (File Handling) ======
 
 
-def save_chuck(data: list[list], category_id: int, page_num: int) -> int:  # @gemini ok
+def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
     """
     Saves a single page of scraped data to a pickle file.
 
     Args:
-        data (list): The raw data list extracted from the table.
+        raw_data (list): The raw data list extracted from the table.
         category_id (int): The category ID being processed.
         page_num (int): The current page number.
 
@@ -321,73 +324,109 @@ def save_chuck(data: list[list], category_id: int, page_num: int) -> int:  # @ge
 
     output_path = INDEX_CHUNKS / f"{category_id}_{page_num}.pkl"
 
-    df = pd.DataFrame(data=data, columns=SEARCH_COLUMNS)
-    df.insert(0, "id", value=category_id)
-    df.insert(0, "page", value=page_num)
+    full_data = [[category_id, page_num] + row for row in raw_data]
+
+    df = pd.DataFrame(data=full_data, columns=SEARCH_COLUMNS)
     df.to_pickle(output_path)
 
     logger.info(f"Table checkpoint saved: {output_path}")
     return len(df)
 
 
-def join_chunks(force: bool = False) -> None:  # @gemini todo
+def join_chunks(force: bool = False) -> None:
     """
     Consolidates all individual page pickle files into a single DataFrame.
 
-    Returns:
-        Path: The path to the consolidated file, or None if no files found.
+    Args:
+        force (bool): If True, completely overwrites the existing index file.
+                      If False, merges new chunks with the existing index,
+                      deduplicating based on the 'expediente' column.
     """
-
-    # @gemini: estava pensando, independente do remain ser usado ou não, vamos supor que deu tudo certo e que tenho um pkl consolidado. Mas eu criei uma rotina que toda semana roda o fetch pra ver se tem coisa nova. Daí o fetch mostrou que a categoria 10 tem 3 novos items. O site não possui uma lógica de ordenação visivel, creio eu que muda diariamente. Eu sei que se for isso eu estou perdendo tempo com essa lógica de remain/update. Mas é também um amadurecimento na área.
-    # Indo direto ao ponto. Ao invés de refazer tudo, posso só refazer a categoria 10 que modificou. Aproveitando, se diminuir o número de itens na categoria em teoria não é para dar problema, já que o dado continua valido. Talvez o link extraido não funcione mais, porém não preciso apagar da tabela ou da base de pdf. Mas talvez seja interessante colocar uma coluna no dataframe que indique isso.
-    # detalhando melhor: dois modos de uso: a função vai sobrescrever o arquivo INDEX_TABLE com um novo usando os chuncks
-    # ou a função vai fazer uma interseção do INDEX_TABLE antigo com o gerado pelos chunks.
-    # é bem provavel que a coluna da tabela no site Expediente seja única. Não sei se ela muda quando um medicamento é renovado ou algo do tipo. Senão daria para usar multiindex com o nome do medicamento e a empresa (o campo empresa divide 'nome - cnpj'. É fácil separar mas nesse estágio a ideia é modificar o minimo possível os dados (RAW/Bronze))
-    # é uma tarefa fácil mas se eu não terminar isso logo eu não vou ter paz, porque quanto mais tempo eu fica mexendo aqui mais coisa não tão importante eu vou achar pra faz e tangenciar do principal.
 
     all_files = list(INDEX_CHUNKS.glob("*.pkl"))
 
     if not all_files:
-        logger.warning("No pickle files found to consolidate in {INDEX_CHUNKS}.")
+        logger.warning(f"No pickle files found to consolidate in {INDEX_CHUNKS}.")
         return
 
-    logger.info(f"{len(all_files)} files found in {INDEX_CHUNKS}")
+    logger.info(f"{len(all_files)} chunks found. Starting consolidation...")
 
-    all_tables = pd.concat([pd.read_pickle(f) for f in all_files], ignore_index=True)
+    try:
+        new_data = pd.concat([pd.read_pickle(f) for f in all_files], ignore_index=True)
 
-    if force:
-        all_tables.to_pickle(INDEX_TABLE)
-        all_tables.to_csv(INDEX_TABLE.with_suffix(".csv"), index=False)
+        if force or not INDEX_TABLE.exists():
+            logger.info("Overwriting final table.")
+            final_df = new_data
+        else:
+            logger.info("Merging new chunks with existing index.")
+            try:
+                old_data = pd.read_pickle(INDEX_TABLE)
 
-    else:
-        # @gemini pega o get_index() e faz um join com all_tables. Como all_tables é mais atual, all_tables sobrescreve linhas iguais no get_index() com base id definido
-        pass
+                combined = pd.concat([old_data, new_data])
 
-    logger.info(f"Consolidation complete. Saved {len(all_tables)} rows to {INDEX_TABLE}")
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                combined.loc[
+                    combined.duplicated(
+                        ["expediente"],
+                        keep=False,
+                    )
+                ].to_pickle(INDEX_DIR / f"debug_dup_{timestamp}.pkl")
 
-    delete_chunks()
+                logger.info("Deduplicating based on 'expediente' keeping last")
+                final_df = combined.drop_duplicates(
+                    subset=["expediente"],
+                    keep="last",
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to merge with existing table, falling back to overwrite: {e}"
+                )
+                final_df = new_data
+
+        # Save Final Result
+        final_df.to_pickle(INDEX_TABLE)
+        final_df.to_csv(INDEX_TABLE.with_suffix(".csv"), index=False)
+
+        logger.info(f"Consolidation complete. Saved {len(final_df)} rows to {INDEX_TABLE}")
+
+        # Only delete chunks if consolidation was successful
+        delete_chunks()
+
+    except Exception as e:
+        logger.error(f"Critical error during join_chunks: {e}")
 
 
-def delete_chunks(
-    category_id: int | None = None,
-):  # @gemini todo: aqui só colocar docstrings e melhorar/aumentar os logs?
-    all_files = list(INDEX_CHUNKS.glob(f"{category_id or ''}*.pkl"))
+def delete_chunks(category_id: int | None = None) -> None:
+    """
+    Deletes temporary chunk files.
+
+    Args:
+        category_id (int | None): If provided, deletes only chunks for that category.
+                                  If None, deletes all chunks.
+    """
+    # Use glob pattern to match specific category or all files
+    pattern = f"{category_id}_*.pkl" if category_id else "*.pkl"
+    all_files = list(INDEX_CHUNKS.glob(pattern))
+
+    if not all_files:
+        logger.debug(f"No chunks found to delete for pattern: {pattern}")
+        return
 
     try:
         for f in all_files:
             f.unlink()
 
-        if not len(list(INDEX_CHUNKS.glob())):
+        # Try to remove dir if empty and we are cleaning everything
+        if category_id is None and not any(INDEX_CHUNKS.iterdir()):
             INDEX_CHUNKS.rmdir()
 
-        logger.info("Remove chunks files complete")
+        logger.info(f"Deleted {len(all_files)} chunk files.")
     except Exception as e:
-        logger.error(f"Error to delete files: {e}")
+        logger.error(f"Error deleting chunk files: {e}")
 
 
-def save_progress(
-    category_id: int, pages: dict, saved_size: int
-) -> None:  # @gemini todo: eu modifiquei um pouco
+def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
     """
     Appends execution metadata to a CSV file with file locking for concurrency safety.
 
@@ -402,7 +441,7 @@ def save_progress(
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
         with open(INDEX_PROGRESS, "a") as out:
-            if not INDEX_PROGRESS.exists():
+            if not INDEX_PROGRESS.exists() or INDEX_PROGRESS.stat().st_size == 0:
                 out.write("timestamp,category_id,current_page,last_page,saved_size\n")
 
             out.write(
@@ -410,19 +449,25 @@ def save_progress(
             )
 
 
-def get_index() -> pd.DataFrame:  # @gemini todo: colocar docstrings e logs. Algo mais?
+def get_index() -> pd.DataFrame | None:
+    """Loads the final consolidated index. Returns empty DataFrame if not found.
+
+    Returns:
+        pd.DataFrame: consolidated index DataFrame
+        None: if file is missing
+    """
     try:
-        return pd.read_pickle(INDEX_TABLE)
+        df = pd.read_pickle(INDEX_TABLE)
+        if not df.empty:
+            return df
+
+    except FileNotFoundError:
+        logger.warning(f"Index table {INDEX_TABLE} not found. Returning None.")
     except Exception as e:
-        logger.error(f"{INDEX_TABLE} doesn't exist or not could be read {e}")
-        raise
+        logger.error(f"Error reading index table: {e}")
 
 
-def get_fetch(
-    category_id: int | None = None,
-) -> (
-    pd.DataFrame | int | None
-):  # @gemini todo: por mais que seja uma função meio que multifuncional, ela retorna coisas distintas demais. Acho que da para manter a ideia de conseguir filtraar qual categoria, mas ao invés de retornar um int retorne a row/serie. Quem chamou que lide com a lógica de pegar o valor desejado ou com um df vazio.
+def get_fetch(category_id: int | None = None) -> pd.DataFrame | None:
     """
     Loads the categories metadata file. Returns the whole DF or specific category size.
 
@@ -430,7 +475,8 @@ def get_fetch(
         category_id (int | None): Optional ID to filter specific size.
 
     Returns:
-        pd.DataFrame | int | None: DataFrame if no ID passed, int if ID found, None if file missing.
+        pd.DataFrame: All DataFrame or filter if category_id passed
+        None: If not found or error
     """
 
     if not INDEX_FETCHED.exists():
@@ -442,59 +488,53 @@ def get_fetch(
 
         if category_id is None:
             logger.info(f"Loaded fetched categories metadata ({len(df)} records).")
-            return df
+            return df if not df.empty else None
 
-        # Filter for specific category
-        row = df.loc[df["id"] == category_id, "size"]
+        row = df.loc[df["category_id"] == category_id]
 
         if row.empty:
             logger.warning(f"Category {category_id} not found in fetch file.")
             return None
 
-        return int(row.iloc[0])  # @gemini acho essa linha estranha
+        return row
 
     except Exception as e:
         logger.error(f"Error reading fetched categories CSV: {e}")
         return None
 
 
-def check_index() -> (
-    int
-):  # @gemini todo: Acho importante uma lógica semelhante ao get_fetch(category_id: int | None = None) -> pd.DataFrame | int | None: Como essa função vai ser usada para saber se falta algo, o diff é importante
+def check_index(category_id: int | None = None) -> int:
     """
     Checks the consistency between the local index and the ANVISA database.
+
+    Args:
+        category_id (int | None): ID to check specific category consistency.
+                                  If None, checks global consistency.
     """
+    logger.info(
+        f"--- Starting Index Check (Target: {category_id if category_id else 'Global'}) ---"
+    )
 
-    # @gemini outra coisa, o check_index só está sendo usado quando roda o run/typer com --check, não sei exatamente aonde mais colocar ele.
+    if (df_local := get_index()) is None:
+        logger.error("Could not obtain local index for comparison.")
+        return -1
 
-    logger.info("--- Starting Index Check ---")
+    if category_id:
+        df_local = df_local[df_local["category_id"] == category_id]
 
-    # 1. Carrega o índice local (O que nós temos)
-    try:
-        df_local = get_index()
-        local_size = len(df_local)
-        logger.info(f"Local index found: {local_size} records.")
-    except Exception:
-        # @gemini analisando todo o código, tem possíbilidade de ocorrer algum erro na qual os chunks não são concatenados no dataframe final? Se sim, o que é melhor fazer, juntar tudo e apagar os chunks ou só apagar eles? onde seria melhor colocar essa lógica?
-        logger.warning(f"Local index ({INDEX_TABLE}) not found or unreadable.")
-        local_size = 0
+    local_size = len(df_local)
+    logger.info(f"Local index found: {local_size} records.")
 
-    logger.info("Loading stored metadata (verifying previous run integrity)...")
-    df_meta = get_fetch()
-
-    if df_meta is None:
+    if (df_meta := get_fetch(category_id)) is None:
         logger.error("Could not obtain metadata for comparison.")
-        return
+        return -1
 
-    expected_size = int(df_meta["size"].sum())
-
-    # 3. Comparação e Relatório
+    expected_size = df_meta["num_items"].sum()
     diff = expected_size - local_size
 
-    logger.info("=" * 40)
-    logger.info(f"EXPECTED: {expected_size}")
-    logger.info(f"FOUND: {local_size}")
-    logger.info("=" * 40)
+    logger.info("=" * 80)
+    logger.info(f"EXPECTED: {expected_size}, FOUND:{local_size}, DIFF:{diff}")
+    logger.info("=" * 80)
 
     if diff == 0:
         logger.info("Local index is complete.")
@@ -506,21 +546,35 @@ def check_index() -> (
     return diff
 
 
-def get_last_processed_page(category_id) -> int:  # @gemini
-    ## le dataframe from INDEX_PROGRESS
-    ## o dataframe tem essas colunas category_id,timestamp,current_page,next_page,last_page,saved_size
-    ## a ideia é que esse arquivo não seja apagado ou modificado manualmente
-    ## mas muita coisa pode ir se repetindo.
-    ## A informação mais importante no momento é qual foi a última pagina processada do category_id
-    ## O timestamp vai ser usado para pegar o ultimo registro
+def get_last_processed_page(category_id: int) -> pd.DataFrame | None:
+    """
+    Retrieves the last successfully processed page and the table size at that time.
 
-    last_page, table_size = 0
-    return last_page, table_size
+    Returns:
+        pd.DataFrame: last entry found for category_id or None
+    """
+
+    if not INDEX_PROGRESS.exists():
+        logger.info("Progress file not found")
+        return
+
+    try:
+        df = pd.read_csv(INDEX_PROGRESS)
+        df_cat = df[df["category_id"] == category_id]
+
+        if not df_cat.empty:
+            last_entry = df_cat.iloc[-1]
+            logger.info(
+                f"Resuming Category {category_id} from page {last_entry['current_page']} of {last_entry['saved_size']}"
+            )
+            return last_entry
+        else:
+            logger.info(f"No history found for Category {category_id}.")
+    except Exception as e:
+        logger.error(f"Error reading progress file: {e}")
 
 
-def goto_last_processed_page(
-    driver: WebDriver, target_page: int
-) -> None:  # @gemini acho que tá okay.
+def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
     """
     Navigates to the target_page using a sliding window strategy.
     Optimizes the path by choosing to start from the beginning or the end.
@@ -530,22 +584,18 @@ def goto_last_processed_page(
         target_page (int): The page number to reach.
     """
     try:
-        # 1. Get total pages to decide strategy
         last_page_elem = driver.find_element(By.XPATH, XPATH_LAST_PAGE)
         total_pages = int(last_page_elem.text.strip())
 
         logger.info(f"Navigating to processed page {target_page} (Total: {total_pages})...")
 
-        # 2. Strategy: Go to LAST page first if target is in the second half
         if target_page > (total_pages / 2):
             logger.debug("Target is closer to the end. Jumping to Last Page.")
             last_page_elem.click()
-            # Wait for the jump
             WebDriverWait(driver, 10).until(
                 lambda d: int(d.find_element(By.XPATH, XPATH_CURRENT_PAGE).text) == total_pages
             )
 
-        # 3. Sliding Window Loop
         while True:
             current_elem = driver.find_element(By.XPATH, XPATH_CURRENT_PAGE)
             current_page = int(current_elem.text.strip())
@@ -554,8 +604,6 @@ def goto_last_processed_page(
                 logger.info(f"Arrived at target page {current_page}.")
                 break
 
-            # Find all visible page number links (exclude prev/next/first/last/more buttons)
-            # Logic: Get all 'a' in pagination, filter those that are numbers
             pagination = driver.find_element(By.XPATH, XPATH_PAGINATION)
             links = pagination.find_elements(By.TAG_NAME, "a")
 
@@ -569,21 +617,16 @@ def goto_last_processed_page(
                 logger.error("Navigation stalled: No numeric pages visible.")
                 break
 
-            # Decision Logic
             if target_page in visible_pages:
-                # Target is visible, click directly
                 visible_pages[target_page].click()
                 next_expected = target_page
             elif current_page < target_page:
-                # Target is ahead, click the max visible to slide right
                 next_expected = max(visible_pages.keys())
                 visible_pages[next_expected].click()
             else:
-                # Target is behind, click the min visible to slide left
                 next_expected = min(visible_pages.keys())
                 visible_pages[next_expected].click()
 
-            # Wait for page update
             WebDriverWait(driver, 10).until(
                 lambda d: int(d.find_element(By.XPATH, XPATH_CURRENT_PAGE).text) == next_expected
             )
@@ -610,36 +653,38 @@ def scrap_pages(
         category_id (int): The ID of the regulatory category to scrape.
     """
     search_size = 0
-
     url = CATEGORIES_URL % str(category_id)
-    logger.info(f"Accessing ANVISA search page: {url}")
 
+    logger.info(f"Accessing ANVISA search page: {url}")
     driver.get(url)
 
-    table_size = set_max_table_size(driver)
+    current_table_size_pages = set_max_table_size(driver)
 
-    # @gemini: por mais que esse bloco try/except e if/else esteja lógicamente correto com o que eu quero, não to gostando dele. Tá mto repetitivo.
+    # Recursão?
     try:
         if not force:
-            last_page_number, previous_table_size = get_last_processed_page(category_id)
+            last_processed = get_last_processed_page(category_id)
 
-            if previous_table_size != table_size:
-                # logger.error("não tem como continuar, vai dar números de páginas diferente , apagando tudo e começando do zero. Clearing previous temporary chunks for {category_id} before starting.")
+            if last_processed["current_page"] == last_processed["last_page"]:
+                logger.info(f"Category {category_id} processing already complete.")
+                return
+
+            if last_processed["saved_size"] != current_table_size_pages:
+                logger.warning("Table size inconsistent,clearing previous temporary chunks")
                 delete_chunks(category_id)
-
-            goto_last_processed_page(driver, last_page_number)
-            _, next_button, _ = get_pages(driver)
-            next_button.click()
+            else:
+                goto_last_processed_page(driver, last_processed["current_page"])
+                _, next_button, _ = get_pages(driver)
+                next_button.click()
         else:
-            logger.info(
-                f"keep=False: Clearing previous temporary chunks for {category_id} before starting."
-            )
+            logger.info(f"Clearing previous temporary chunks for {category_id} before starting.")
             delete_chunks(category_id)
     except Exception as e:
-        logger.error(
-            f"Some error occurs {e}. Clearing previous temporary chunks for {category_id} before starting."
-        )
+        logger.error(f"Some error occurs {e}.")
+        logger.info(f"Clearing previous temporary chunks for {category_id} before starting.")
         delete_chunks(category_id)
+
+    # == scraping pages == #
 
     pages, next_button, _ = get_pages(driver)
     logger.info(f"Pagination found. Last page: {pages['last']}")
@@ -684,6 +729,10 @@ def scrap_pages(
     return pages["current"], search_size
 
 
+# Falta 5 FUNÇÕES PARA ANALISAR
+
+------------------------------------------------------------------------------------------------------------------------
+
 def scrap_unit_category(category_id: int, force: bool = False) -> None:
     """
     Orchestrates the scraping of a single category with pre-fetch validation.
@@ -691,7 +740,9 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
     logger.info(f"--- Starting Process for Category {category_id} ---")
 
     if expected_size := get_fetch(category_id):
-        logger.info(f"Category {category_id}: Expecting {expected_size} items.")
+        logger.info(
+            f"Category {category_id}: Expecting {expected_size} items."
+        )  # expected_size['size'].sum()
     else:
         logger.warning(f"Skipping Category {category_id}: Fetch is {expected_size}")
         return
@@ -807,11 +858,6 @@ def fetch_categories():
 
     options = get_firefox_options()
 
-    fetch_columns = [
-        "id",
-        "table_sizepages",
-        "total",
-    ]
     fetch_values = []
 
     logger.info("--- Starting Fetch Routine for All Categories ---")
@@ -826,7 +872,7 @@ def fetch_categories():
                 logger.error(f"Failed to fetch metadata for Category {category_id}: {e}")
                 fetch_values.append([category_id, 0, 0, 0])
 
-        fetch_df = pd.DataFrame(fetch_values, columns=fetch_columns)
+        fetch_df = pd.DataFrame(fetch_values, columns=FETCH_COLUMNS)
         fetch_df.to_csv(INDEX_FETCHED, index=False)
 
         logger.info(f"Fetch complete. Metadata saved to {INDEX_FETCHED}")

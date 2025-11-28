@@ -15,9 +15,20 @@ CATEGORIES_URL = "https://consultas.anvisa.gov.br/#/bulario/q/?categoriasRegulat
 CATEGORIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 SEARCH_COLUMNS = [
-    "drugs",
-    "url",
-    "company",
-    "code",
-    "publication_date",
+    "category_id",
+    "category_page",
+    "medicamento",
+    "link",
+    "empresa",
+    "expediente",
+    "data_pub",
 ]
+
+FETCH_COLUMNS = [
+    "category_id",
+    "page_size",
+    "last_page",
+    "num_items",
+]
+
+# PROGRESS_COLUMNS = [timestamp,category_id,current_page,last_page,saved_size]
