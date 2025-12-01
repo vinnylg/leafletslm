@@ -1,115 +1,157 @@
 from dagster import (
+    AssetExecutionContext,
+    AssetsDefinition,
+    Definitions,
     DynamicOut,
     DynamicOutput,
     In,
     List,
+    MaterializeResult,
+    MetadataValue,
     OpExecutionContext,
     Out,
-    job,
+    asset,
+    graph,
     op,
 )
+import pandas as pd
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from drugslm.scraper.anvisa.build_index import (
-    fetch_categories,
-    get_fetched,
-    join_category_pages,
-    scrap_pages,
+# --- IMPORTAÇÕES DO SEU SCRIPT (A Lógica Real) ---
+from drugslm.scraper.anvisa.catalog import (
+    METADATA,
+    CATALOG,
+    CATEGORIES,
+    fetch_metadata,  # Função simples
+    fetch_category_metadata,  # Função auxiliar para planejar
+    scrap_pages,  # Função worker
+    join_chunks,  # Função join
 )
 
+# Recurso do Selenium
+from drugslm.scraper.selenium import webdriver_resource
 
-@op(required_resource_keys={"selenium"}, out=DynamicOut())
-def op_fetch_metadata(context: OpExecutionContext):
+# ==============================================================================
+# 1. ASSET SIMPLES: METADADOS
+# ==============================================================================
+
+
+@asset(
+    group_name="anvisa_bronze",
+    description="Gera o arquivo metadata.csv.",
+    compute_kind="python",
+)
+def anvisa_metadata(context: AssetExecutionContext) -> MaterializeResult:
     """
-    Executes metadata fetching and generates dynamic outputs for each non-empty category.
-    This replaces the sequential loop, allowing Dagster to parallelize the scraping step.
+    Este asset roda sequencialmente para garantir que temos a base.
     """
-    driver: WebDriver = context.resources.selenium
+    context.log.info("Executando fetch_metadata do script catalog.py...")
+    fetch_metadata()
 
-    context.log.info("Starting Metadata Fetch...")
-
-    # Executes the original logic from index.py
-    # fetch_categories saves the CSV, so we only need the return to orchestrate
-    df = fetch_categories(driver)
-
-    if df is None or df.empty:
-        context.log.warning("No categories returned from fetch.")
-        return
-
-    # Iterates over found categories to create dynamic tasks
-    for _, row in df.iterrows():
-        category_id = int(row["category_id"])
-        category_size = int(row["category_size"])
-
-        # Optimization: If size is 0, do not create a scrape task
-        if category_size > 0:
-            context.log.info(f"Scheduling Category {category_id} ({category_size} items)")
-            yield DynamicOutput(
-                value=category_id,
-                mapping_key=str(category_id).replace(
-                    "-", "_"
-                ),  # mapping_key must be a safe string
-            )
-        else:
-            context.log.info(f"Skipping scheduling for Category {category_id} (Empty)")
-
-
-@op(required_resource_keys={"selenium"}, ins={"category_id": In(int)}, out=Out(str))
-def op_scrape_category(context: OpExecutionContext, category_id: int):
-    """
-    Receives an injected driver and scrapes a specific category.
-    Returns a status string to be collected by the join step.
-    """
-    driver: WebDriver = context.resources.selenium
-
-    # Double check against fetch metadata
-    expected_size = get_fetched(category_id)
-    context.log.info(
-        f"Starting Scrape for Category {category_id}. Expected items: {expected_size}"
+    # Retorno apenas para a UI do Dagster ficar bonita
+    df = pd.read_csv(METADATA)
+    return MaterializeResult(
+        metadata={
+            "path": str(METADATA),
+            "total_items": int(df["num_items"].sum()),
+            "preview": MetadataValue.md(df.head().to_markdown()),
+        }
     )
 
-    # Calls the core logic from index.py directly
-    _, saved_items = scrap_pages(driver, category_id)
 
-    msg = f"Finished Category {category_id}. Saved {saved_items} items."
-    context.log.info(msg)
-
-    return msg
+# ==============================================================================
+# 2. OPERAÇÕES (OPS) PARA O GRAFO DO CATÁLOGO
+# (Estas são as peças internas para montar o Asset complexo)
+# ==============================================================================
 
 
-@op(ins={"scraped_results": In(List[str])})
-def op_consolidate_results(context: OpExecutionContext, scraped_results: list):
-    """
-    Consolidates all individual page pickle files into a single DataFrame.
-    This runs only after all 'op_scrape_category' tasks are finished.
+@op(
+    out=DynamicOut(),
+    description="Lê o metadata e cria uma 'filial' do pipeline para cada categoria.",
+)
+def plan_scraping_op(context: OpExecutionContext):
+    # Dependência implícita: assume que metadata.csv já existe (garantido pelo grafo)
+    df = pd.read_csv(METADATA)
 
-    Args:
-        scraped_results: List of messages from previous steps (used mainly to enforce dependency).
-    """
-    context.log.info(f"All {len(scraped_results)} categories finished. Starting consolidation...")
+    for _, row in df.iterrows():
+        cat_id = int(row["category_id"])
+        num_items = int(row["num_items"])
 
-    final_path = join_category_pages()
+        if num_items > 0:
+            context.log.info(f"Categoria {cat_id}: {num_items} itens. Agendando...")
+            # Cria um ramo dinâmico no Dagster
+            yield DynamicOutput(value=cat_id, mapping_key=f"cat_{cat_id}")
 
-    if final_path:
-        context.log.info(f"Consolidation complete. File saved at: {final_path}")
+
+@op(
+    required_resource_keys={"selenium"},  # Pede o Selenium aqui
+    ins={"category_id": In(int)},
+    out=Out(str),
+    description="Worker que recebe o Driver e processa uma categoria.",
+)
+def scrape_category_op(context: OpExecutionContext, category_id: int):
+    # O Dagster injeta o driver vindo do resource
+    driver: WebDriver = context.resources.selenium
+
+    # Chama sua função blindada 'scrap_pages' passando o driver
+    # Force=False para usar sua lógica de Resume
+    current_page, saved = scrap_pages(driver, category_id, force=False)
+
+    return f"Categoria {category_id} finalizada."
+
+
+@op(
+    ins={"results": In(List[str])},  # Espera uma lista de resultados (sinal que todos acabaram)
+    out=Out(pd.DataFrame),
+    description="Junta tudo e retorna o DF final.",
+)
+def consolidate_catalog_op(context: OpExecutionContext, results: list):
+    context.log.info("Todas as categorias terminaram. Consolidando...")
+
+    join_chunks(force=False)
+
+    if CATALOG.exists():
+        return pd.read_pickle(CATALOG)
     else:
-        context.log.warning("Consolidation failed or no files found.")
+        raise FileNotFoundError("Catalog não encontrado.")
 
 
-@job(resource_defs={"selenium": "selenium"})  # Will be resolved in definitions.py
-def anvisa_index_scraper_job():
-    """
-    Job that orchestrates the entire pipeline:
-    1. Fetch metadata (Sequential)
-    2. Scrape categories (Parallel/Dynamic Fan-out)
-    3. Consolidate results (Fan-in)
-    """
-    # 1. Execute Fetch and get a list of valid IDs
-    category_ids = op_fetch_metadata()
+# ==============================================================================
+# 3. O GRAFO (CONECTANDO AS PEÇAS)
+# ==============================================================================
 
-    # 2. Map the scrape operation to each returned ID
-    # .collect() gathers all results into a list, waiting for all to finish
-    scrape_results = category_ids.map(op_scrape_category).collect()
 
-    # 3. Join everything after scrape is done
-    op_consolidate_results(scrape_results)
+@graph
+def make_catalog_graph():
+    # 1. Planejamento: Gera N saídas
+    category_ids = plan_scraping_op()
+
+    # 2. Execução: Roda N vezes em paralelo
+    # .map() distribui, .collect() aguarda todos
+    scrape_results = category_ids.map(scrape_category_op).collect()
+
+    # 3. Consolidação: Roda 1 vez no final
+    return consolidate_catalog_op(scrape_results)
+
+
+# ==============================================================================
+# 4. ASSET COMPLEXO (GRAPH-BACKED ASSET)
+# ==============================================================================
+
+# Aqui transformamos aquele grafo acima em um Asset oficial
+anvisa_catalog = AssetsDefinition.from_graph(
+    make_catalog_graph,
+    # Esta linha cria a dependência mágica:
+    # "Este grafo só roda depois que o asset 'anvisa_metadata' estiver pronto"
+    keys_by_input_name={},
+    # Se quiser forçar dependência de dados, usaria keys_by_input_name={"entrada": anvisa_metadata.key}
+    # Mas como lemos o arquivo do disco no 'plan_scraping_op', vamos definir via 'deps'
+)
+
+# Precisamos dizer explicitamente que esse asset depende do metadata
+# (workaround comum quando o grafo lê arquivo do disco e não recebe input direto da memória)
+anvisa_catalog = anvisa_catalog.to_asset_definition().with_attributes(
+    deps=[anvisa_metadata],
+    group_name="anvisa_bronze",
+    description="Catálogo consolidado (Scraping Paralelo Dinâmico).",
+)
