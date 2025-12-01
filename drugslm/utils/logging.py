@@ -44,8 +44,9 @@ def setup_logging(log_file_path: Optional[Union[str, Path]] = None) -> logging.L
     Configures the standard Python logging module.
 
     This function sets up the root logger with:
-    1. A Console Handler (stderr) for INFO level and above.
+    1. A Console Handler (stderr) for DEBUG level and above (filtered by module).
     2. An optional Rotating File Handler for DEBUG level and above.
+    3. Noise reduction for third-party libraries.
 
     Call this at the beginning of EACH entry point.
 
@@ -57,17 +58,13 @@ def setup_logging(log_file_path: Optional[Union[str, Path]] = None) -> logging.L
     Returns:
         logging.Logger: The configured root logger instance.
     """
-    global _configured
-    if _configured:
-        return logging.getLogger()
-
-    # Get the root logger
+    # Evita reconfigurar se chamado múltiplas vezes
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)  # Capture everything, filter at handlers
-
-    # Remove default/existing handlers to prevent duplication or conflicts
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
+
+    # Capture everything at root level, filter at handlers/modules
+    root_logger.setLevel(logging.DEBUG)
 
     # --- Formatters ---
     # Console: Concise, colored (if supported by terminal), time-focused
@@ -91,7 +88,8 @@ def setup_logging(log_file_path: Optional[Union[str, Path]] = None) -> logging.L
     else:
         console_handler = logging.StreamHandler(sys.stderr)
 
-    console_handler.setLevel(logging.INFO)
+    # IMPORTANTE: Console em DEBUG para você ver seus logs
+    console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(console_fmt)
     root_logger.addHandler(console_handler)
 
@@ -117,7 +115,35 @@ def setup_logging(log_file_path: Optional[Union[str, Path]] = None) -> logging.L
     else:
         logging.info("File logging disabled. Logging to console only.")
 
-    _configured = True
+    # ==============================================================================
+    # --- 3. NOISE REDUCTION (Silenciamento de Terceiros) ---
+    # ==============================================================================
+
+    # Lista de bibliotecas "faladeiras" que vamos silenciar (só mostram WARNING ou ERROR)
+    noisy_libraries = [
+        "urllib3",
+        "selenium",
+        "webdriver_manager",
+        "filelock",
+        "retry",
+        # "retry.api",  # Garante silêncio total do retry
+        "w3lib",
+        "bs4",
+        "paramiko",
+        "cryptography",
+    ]
+
+    for lib in noisy_libraries:
+        logging.getLogger(lib).setLevel(logging.WARNING)
+
+    # ==============================================================================
+    # --- 4. PRIORITY FOR YOUR CODE---
+    # ==============================================================================
+
+    # Garante que SEUS módulos tenham permissão para falar tudo (DEBUG)
+    logging.getLogger("drugslm").setLevel(logging.DEBUG)
+    logging.getLogger("__main__").setLevel(logging.DEBUG)
+
     return root_logger
 
 

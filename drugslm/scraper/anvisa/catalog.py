@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from functools import partial
 import logging
+from pathlib import Path
 from time import sleep
 from typing import Tuple
 
@@ -53,6 +54,9 @@ from drugslm.utils.asserts import assert_text_number
 logger = logging.getLogger(__name__)
 
 # ====== CONSTANTS ======
+
+SLEEPSECS = 1
+WAITSECS = 5
 
 XPATH_PAGINATION = "//ul[contains(@class, 'pagination')]"
 XPATH_CURRENT_PAGE = f"{XPATH_PAGINATION}//li[contains(@class, 'active')]//a"
@@ -105,14 +109,16 @@ def sel_max_items_page(driver: WebDriver) -> int:
         int: The selected items per page. Returns 0 if failed.
     """
     try:
-        container = WebDriverWait(driver, 15).until(
+        container = WebDriverWait(driver, WAITSECS).until(
             EC.presence_of_element_located((By.XPATH, XPATH_PAGE_COUNT))
         )
 
         buttons = container.find_elements(By.TAG_NAME, "button")
 
         if not buttons:
-            logger.warning("Pagination count container found, but no buttons were visible.")
+            logger.warning(
+                "Pagination count container found, but no buttons were visible. Returning 0."
+            )
             return 0
 
         for btn in reversed(buttons):
@@ -128,13 +134,17 @@ def sel_max_items_page(driver: WebDriver) -> int:
 
             except WebDriverException as e:
                 logger.warning(
-                    f"Failed to click page count option '{btn.text}'. Trying previous option. Error: {e}"
+                    f"Failed to click page count option '{btn.text}'. Trying previous. Error: {str(e).splitlines()[0]}"
                 )
                 continue
+
+        logger.error("Exited the loop with nothing. Returning 0.")
         return 0
 
     except Exception as e:
-        logger.critical(f"Element for sel_max_items_page not found: {e}")
+        logger.warning(
+            f"Element for items per page not found: {str(e).splitlines()[0]}. Returning 0."
+        )
         return 0
 
 
@@ -149,7 +159,7 @@ def table2data(element: WebElement) -> list:
         list: A list of lists [medicamento, link, empresa, expediente, data_pub] or an empty list [].
     """
     try:
-        logger.debug("Starting table HTML parsing...")
+        logger.info("Starting table HTML parsing...")
 
         html = element.get_attribute("outerHTML")
         soup = BeautifulSoup(html, "html.parser")
@@ -190,16 +200,15 @@ def table2data(element: WebElement) -> list:
             row = [medicamento, link_medicamento, empresa, expediente, data_pub]
             data.append(row)
 
-        logger.debug(f"Table parsed successfully. Extracted {len(data)} rows.")
+        logger.info(f"Table parsed successfully. Extracted {len(data)} rows.")
         return data
 
     except Exception as e:
-        logger.exception(f"Unexpected error while parsing table data: {e}")
+        logger.exception(f"Unexpected error while parsing table data: {str(e).splitlines()[0]}")
         return []
 
 
-@retry(tries=5, delay=2, backoff=1.2)
-def get_pages(driver: WebDriver) -> Tuple[dict, WebElement, WebElement]:
+def get_pages(driver: WebDriver) -> Tuple[dict, WebElement | None, WebElement | None]:
     """
     Captures the current state of pagination controls and the next page element.
 
@@ -215,11 +224,11 @@ def get_pages(driver: WebDriver) -> Tuple[dict, WebElement, WebElement]:
     Returns:
         Tuple[dict, WebElement]: A tuple containing:
             - dict: A dictionary with keys 'current', 'next', and 'last' (all integers).
-            - WebElement: The Selenium element corresponding to the *next* page button.
-            - WebElement: The Selenium element corresponding to the *last* page button.
+            - WebElement: The Selenium element corresponding to the *next* page button or None.
+            - WebElement: The Selenium element corresponding to the *last* page button or None.
     """
     try:
-        pagination = WebDriverWait(driver, 10).until(
+        pagination = WebDriverWait(driver, WAITSECS).until(
             EC.presence_of_element_located((By.XPATH, XPATH_PAGINATION))
         )
 
@@ -250,8 +259,18 @@ def get_pages(driver: WebDriver) -> Tuple[dict, WebElement, WebElement]:
         )
 
     except Exception as e:
-        logger.error(f"Failed to get pagination details: {e}")
-        raise
+        logger.warning(
+            f"Pagination not found ({str(e).splitlines()[0]}). Defaulting to Single Page view."
+        )
+        return (
+            {
+                "current": 1,
+                "next": 1,
+                "last": 1,
+            },
+            None,
+            None,
+        )
 
 
 def resolve_next_page(current_page: WebElement, last_page: WebElement) -> Tuple[int, int, int]:
@@ -288,7 +307,7 @@ def resolve_next_page(current_page: WebElement, last_page: WebElement) -> Tuple[
     return current_page_number, last_page_number, next_page_number
 
 
-@retry(tries=5, delay=2, backoff=1.2)
+@retry(tries=2, delay=2, backoff=2, logger=None)
 def find_table(driver: WebDriver) -> WebElement:
     """
     Waits for the main results table to be present in the DOM.
@@ -306,24 +325,46 @@ def find_table(driver: WebDriver) -> WebElement:
         TimeoutException: If the table is not found within the timeout period (after retries).
     """
     try:
-        logger.debug("Attempting to find table element...")
+        logger.info("Attempting to find table element...")
 
-        table = WebDriverWait(driver, 15).until(
+        table = WebDriverWait(driver, WAITSECS).until(
             EC.presence_of_element_located((By.TAG_NAME, "table")),
         )
 
         scroll(driver, table)
         highlight(driver, table, color="blue")
 
-        logger.debug("Table found successfully.")
+        logger.info("Table found successfully.")
         return table
 
-    except Exception:
+    except Exception as e:
         logger.error("Failed to find table after retries.")
+        logger.warning(f"Table not found: {str(e).splitlines()[0]}. Retrying...")
         raise
 
 
 # ====== I/O & Persistence (File Handling) ======
+
+
+def rotate_file(filepath: Path) -> None:
+    """
+    Renames a file by appending a timestamp, acting as a backup rotation.
+    Example: 'data.csv' -> 'data_20231027103000.csv'
+    """
+    if not filepath.exists():
+        return
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+    # Constrói novo nome: stem (nome sem ext) + timestamp + suffix (extensão)
+    new_name = f"{filepath.stem}_{timestamp}{filepath.suffix}"
+    new_path = filepath.with_name(new_name)
+
+    try:
+        filepath.rename(new_path)
+        logger.info(f"Rotated/Archived file: {filepath.name} -> {new_name}")
+    except Exception as e:
+        logger.warning(f"Failed to rotate file {filepath}: {e}")
 
 
 def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
@@ -398,7 +439,7 @@ def join_chunks(force: bool = False) -> None:
 
             except Exception as e:
                 logger.error(
-                    f"Failed to merge with existing table, falling back to overwrite: {e}"
+                    f"Failed to merge with existing table, falling back to overwrite: {str(e).splitlines()[0]}"
                 )
                 final_df = new_data
 
@@ -412,7 +453,21 @@ def join_chunks(force: bool = False) -> None:
         delete_chunks()
 
     except Exception as e:
-        logger.error(f"Critical error during join_chunks: {e}")
+        logger.error(f"Critical error during join_chunks: {str(e).splitlines()[0]}")
+
+
+def delete_lock_progress() -> None:
+    """
+    Removes stale lock files from previous executions to prevent deadlocks.
+    This should be called only during single-threaded orchestration (start of pipeline).
+    """
+    lock_file = PROGRESS.with_suffix(".csv.lock")
+    if lock_file.exists():
+        try:
+            lock_file.unlink()
+            logger.info("Removed stale lock file from previous run.")
+        except Exception as e:
+            logger.warning(f"Could not remove stale lock file: {e}")
 
 
 def delete_chunks(category_id: int | None = None) -> None:
@@ -421,27 +476,26 @@ def delete_chunks(category_id: int | None = None) -> None:
 
     Args:
         category_id (int | None): If provided, deletes only chunks for that category.
-                                  If None, deletes all chunks.
     """
-    # Use glob pattern to match specific category or all files
+    # 1. Limpeza de Chunks
     pattern = f"{category_id}_*.pkl" if category_id else "*.pkl"
     all_files = list(CHUNKS_DIR.glob(pattern))
 
-    if not all_files:
-        logger.debug(f"No chunks found to delete for pattern: {pattern}")
-        return
+    if all_files:
+        try:
+            for f in all_files:
+                f.unlink()
+            logger.info(f"Deleted {len(all_files)} chunk files.")
+        except Exception as e:
+            logger.error(f"Error deleting chunk files: {str(e).splitlines()[0]}")
+    else:
+        logger.info(f"No chunks found to delete for pattern: {pattern}")
 
-    try:
-        for f in all_files:
-            f.unlink()
-
-        # Try to remove dir if empty and we are cleaning everything
-        if category_id is None and not any(CHUNKS_DIR.iterdir()):
+    if category_id is None and CHUNKS_DIR.exists() and not any(CHUNKS_DIR.iterdir()):
+        try:
             CHUNKS_DIR.rmdir()
-
-        logger.info(f"Deleted {len(all_files)} chunk files.")
-    except Exception as e:
-        logger.error(f"Error deleting chunk files: {e}")
+        except Exception:
+            pass
 
 
 def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
@@ -482,7 +536,7 @@ def get_catalog() -> pd.DataFrame | None:
     except FileNotFoundError:
         logger.warning(f"Index table {CATALOG} not found. Returning None.")
     except Exception as e:
-        logger.error(f"Error reading catalog table: {e}")
+        logger.error(f"Error reading catalog table: {str(e).splitlines()[0]}")
 
 
 def get_metadata(category_id: int | None = None) -> pd.DataFrame | None:
@@ -517,7 +571,9 @@ def get_metadata(category_id: int | None = None) -> pd.DataFrame | None:
         return row
 
     except Exception as e:
-        logger.error(f"Error reading metadata file categories {category_id} : {e}")
+        logger.error(
+            f"Error reading metadata file categories {category_id} : {str(e).splitlines()[0]}"
+        )
         return None
 
 
@@ -591,7 +647,7 @@ def get_last_processed_page(category_id: int) -> pd.DataFrame | None:
         else:
             logger.info(f"No history found for Category {category_id}.")
     except Exception as e:
-        logger.error(f"Error reading progress file: {e}")
+        logger.error(f"Error reading progress file: {str(e).splitlines()[0]}")
 
 
 def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
@@ -610,9 +666,9 @@ def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
         logger.info(f"Navigating to processed page {target_page} (Total: {total_pages})...")
 
         if target_page > (total_pages / 2):
-            logger.debug("Target is closer to the end. Jumping to Last Page.")
+            logger.info("Target is closer to the end. Jumping to Last Page.")
             last_page_elem.click()
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, WAITSECS).until(
                 lambda d: int(d.find_element(By.XPATH, XPATH_CURRENT_PAGE).text) == total_pages
             )
 
@@ -647,12 +703,12 @@ def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
                 next_expected = min(visible_pages.keys())
                 visible_pages[next_expected].click()
 
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, WAITSECS).until(
                 lambda d: int(d.find_element(By.XPATH, XPATH_CURRENT_PAGE).text) == next_expected
             )
 
     except Exception as e:
-        logger.error(f"Failed to navigate to last processed page: {e}")
+        logger.error(f"Failed to navigate to last processed page: {str(e).splitlines()[0]}")
         raise
 
 
@@ -684,23 +740,37 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
     items_per_page = sel_max_items_page(driver)
 
     if force:
+        logger.info(f"Clearing previous chunks for Category {category_id} to start fresh.")
         delete_chunks(category_id)
-    else:
-        last_processed = get_last_processed_page(category_id)
-
+    elif (last_processed := get_last_processed_page(category_id)) is not None:
         if last_processed["current_page"] == last_processed["last_page"]:
-            logger.info(f"Category {category_id} processing already complete.")
+            logger.info(f"Category {category_id} was fully processed in previous run. Skipping.")
             return
 
         elif last_processed["saved_size"] != items_per_page:
             logger.warning(
-                f"Table size inconsistent,{last_processed['saved_size']} != {items_per_page}"
+                f"Table size inconsistent,{last_processed['saved_size']} != {items_per_page}. Structure changed. Restarting category."
             )
             delete_chunks(category_id)
         else:
-            goto_last_processed_page(driver, last_processed["current_page"])
+            target_page = int(last_processed["current_page"])
+            logger.info(f"Resuming Category {category_id} from Page {target_page}...")
+
+            goto_last_processed_page(driver, target_page)
+            sleep(SLEEPSECS)
+
             _, next_button, _ = get_pages(driver)
-            next_button.click()
+
+            if next_button:
+                logger.info("Clicking Next to continue scraping...")
+                next_button.click()
+            else:
+                logger.error(
+                    "Resume pointed to a page with no 'Next' button. Scraping current page again."
+                )
+    else:
+        logger.info(f"No progress found for Category {category_id}. Starting fresh.")
+        delete_chunks(category_id)
 
     # == scraping pages == #
 
@@ -721,7 +791,7 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
         save_progress(category_id, pages, saved_size)
         search_size += saved_size
 
-        if pages["current"] >= pages["last"]:
+        if (pages["current"] >= pages["last"]) or (next_button is None):
             logger.info("Last page reached. Ending scrape.")
             break
 
@@ -731,10 +801,10 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
         highlight(driver, next_button, color="green")
 
         next_button.click()
-        sleep(1)
+        sleep(SLEEPSECS)
 
         pages, next_button, _ = get_pages(driver)
-        sleep(1)
+        sleep(SLEEPSECS)
 
         if previous_page == pages["current"]:
             logger.warning(
@@ -760,22 +830,23 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
         force (bool): If True, forces a fresh scrape ignoring previous progress.
                       Defaults to False.
     """
-    logger.info(f"--- Starting Process for Category {category_id} ---")
-
-    if metadata := get_metadata(category_id):
-        expected = metadata["num_items"].sum()
-        logger.info(f"Category {category_id}: Expecting {expected} items.")
-    else:
-        logger.warning(f"Skipping Category {category_id}: Metadata not found or empty.")
-        return
-
-    options = get_firefox_options()
-
     try:
+        logger.info(f"--- Starting Process for Category {category_id} ---")
+
+        if (metadata := get_metadata(category_id)) is not None:
+            expected = int(metadata["num_items"].sum())
+            logger.info(f"Category {category_id}: Expecting {expected} items.")
+        else:
+            logger.warning(f"Skipping Category {category_id}: Metadata not found or empty.")
+            return
+
+        options = get_firefox_options()
+
         with webdriver_manager(options) as driver:
             scrap_pages(driver, category_id, force)
+
     except Exception as e:
-        logger.exception(f"Process failed for Category {category_id}: {e}")
+        logger.exception(f"Process failed for Category {category_id}: {str(e).splitlines()[0]}")
 
 
 # ====== Fetch Core Business Logic (Process) ======
@@ -799,6 +870,8 @@ def fetch_category_metadata(driver: WebDriver, category_id: int) -> list:
         driver.get(url)
 
         items_per_page = sel_max_items_page(driver)
+        sleep(SLEEPSECS)
+
         pages, _, last_button = get_pages(driver)
 
         table1 = find_table(driver)
@@ -806,9 +879,9 @@ def fetch_category_metadata(driver: WebDriver, category_id: int) -> list:
         page_size = len(data1)  # == items_per_page if not unique page
 
         if pages["last"] > 1:
-            logger.debug(f"Category {category_id}: Jumping to last page ({pages['last']})...")
+            logger.info(f"Category {category_id}: Jumping to last page ({pages['last']})...")
             last_button.click()
-            sleep(1)
+            sleep(SLEEPSECS)
 
             table2 = find_table(driver)
             data2 = table2data(table2)
@@ -854,17 +927,26 @@ def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
 
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
 
+    delete_lock_progress()
+
     if force:
         logger.info("Force=True: Cleaning ALL temporary chunks before starting.")
         delete_chunks(category_id=None)
 
+        logger.info("Performing global cleanup: Rotating main artifacts.")
+
+        rotate_file(PROGRESS)
+        rotate_file(CATALOG)
+
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
-        executor.map(
-            partial(
-                scrap_unit_category,
-                force=force,
-            ),
-            CATEGORIES,
+        list(
+            executor.map(
+                partial(
+                    scrap_unit_category,
+                    force=force,
+                ),
+                CATEGORIES,
+            )
         )
 
     logger.info("Thread pool execution finished. Consolidating data chunks...")
@@ -882,6 +964,7 @@ def fetch_metadata() -> None:
     for each category, which serves as the baseline for validation.
     """
     logger.info("--- Setup Fetch Execution ---")
+    rotate_file(METADATA)
 
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -897,7 +980,9 @@ def fetch_metadata() -> None:
                     stats = fetch_category_metadata(driver, category_id)
                     fetch_values.append(stats)
             except Exception as e:
-                logger.error(f"Failed to fetch metadata for Category {category_id}: {e}")
+                logger.error(
+                    f"Failed to fetch metadata for Category {category_id}: {str(e).splitlines()[0]}"
+                )
                 fetch_values.append([category_id, 0, 0, 0])
 
         fetch_df = pd.DataFrame(fetch_values, columns=METADATA_COLUMNS)
@@ -906,7 +991,7 @@ def fetch_metadata() -> None:
         logger.info(f"Fetch complete. Metadata saved to {METADATA}")
 
     except Exception as e:
-        logger.critical(f"Critical error during categories fetch: {e}")
+        logger.critical(f"Critical error during categories fetch: {str(e).splitlines()[0]}")
         raise
 
 
@@ -950,30 +1035,39 @@ def run(
             show_default=False,
         ),
     ] = False,
-    update: Annotated[
+    fetch_only: Annotated[
         bool,
         typer.Option(
-            "--update/--no-update",
-            "-u/-U",
-            help="Fetch fresh metadata from ANVISA before starting.",
-            show_default=True,
+            "--fetch-only",
+            "--fetch",
+            help="Only Fetch fresh metadata from ANVISA and exit.",
+            show_default=False,
         ),
-    ] = True,
+    ] = False,
+    skip_fetch: Annotated[
+        bool,
+        typer.Option(
+            "--no-fetch",
+            "--skip-fetch",
+            help="Skip fetching fresh metadata (uses existing file).",
+            show_default=False,
+        ),
+    ] = False,
 ) -> None:
     """
     Runs the ANVISA drug listing scraper pipeline.
     """
     try:
-        # 1. Update Metadata (if requested or default)
-        if update:
-            fetch_metadata()
-
-        # 2. Check Mode (Exit after check)
         if check:
             check_catalog()
             return
 
-        # 3. Standard Pipeline Execution
+        if not skip_fetch:
+            fetch_metadata()
+
+        if fetch_only:
+            return
+
         logger.info(f"Starting pipeline (Threads: {n_threads}, Force: {force})...")
 
         scrap_categories(n_threads=n_threads, force=force)
@@ -981,7 +1075,7 @@ def run(
         logger.info(f"Pipeline execution complete. Log: {log_file_path.resolve()}")
 
     except Exception as e:
-        logger.exception(f"Fatal error during pipeline execution: {e}")
+        logger.exception(f"Fatal error during pipeline execution: {str(e).splitlines()[0]}")
         raise typer.Exit(code=1)
 
 

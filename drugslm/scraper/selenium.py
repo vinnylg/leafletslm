@@ -84,7 +84,7 @@ def webdriver_manager(browser_options: Union[FirefoxOptions, Any]) -> Iterator[W
         yield driver
 
     except Exception as e:
-        logger.error(f"Exception occurred during driver usage: {e}")
+        logger.error(f"Exception occurred during driver usage: {str(e).splitlines()[0]}")
         raise
     finally:
         if driver:
@@ -112,7 +112,7 @@ def webdriver_resource(context: InitResourceContext) -> Iterator[WebDriver]:
     try:
         browser_options = get_firefox_options()
     except Exception as e:
-        log.error(f"Failed to load browser options: {e}")
+        log.error(f"Failed to load browser options: {str(e).splitlines()[0]}")
         raise
 
     driver = None
@@ -124,7 +124,9 @@ def webdriver_resource(context: InitResourceContext) -> Iterator[WebDriver]:
         yield driver
 
     except Exception as e:
-        log.error(f"Failed to initialize or validate WebDriver in resource: {e}")
+        log.error(
+            f"Failed to initialize or validate WebDriver in resource: {str(e).splitlines()[0]}"
+        )
         raise
     finally:
         if driver:
@@ -159,7 +161,7 @@ def validate_driver_connection(driver: WebDriver) -> bool:
         logger.info("Driver connection validated successfully.")
         return True
     except Exception as e:
-        logger.error(f"Driver health check failed: {e}")
+        logger.error(f"Driver health check failed: {str(e).splitlines()[0]}")
         raise
 
 
@@ -183,7 +185,7 @@ def get_firefox_options(config_path: Union[Path, str] = FIREFOX_OPTIONS) -> Fire
         logger.error(f"Configuration file not found at: {config_file}")
         raise FileNotFoundError(f"Configuration file not found at: {config_file}")
 
-    logger.debug(f"Loading Firefox options from: {config_file}")
+    logger.info(f"Loading Firefox options from: {config_file}")
 
     with open(config_file, "r", encoding="utf-8") as f:
         config: Dict[str, Any] = yaml.safe_load(f)
@@ -192,13 +194,13 @@ def get_firefox_options(config_path: Union[Path, str] = FIREFOX_OPTIONS) -> Fire
 
     arguments = config.get("arguments", [])
     if arguments:
-        logger.debug(f"Adding {len(arguments)} arguments to FirefoxOptions.")
+        logger.info(f"Adding {len(arguments)} arguments to FirefoxOptions.")
         for arg in arguments:
             options.add_argument(arg)
 
     preferences = config.get("preferences", {})
     if preferences:
-        logger.debug(f"Setting {len(preferences)} preferences for FirefoxOptions.")
+        logger.info(f"Setting {len(preferences)} preferences for FirefoxOptions.")
         for name, value in preferences.items():
             options.set_preference(name, value)
 
@@ -219,7 +221,7 @@ def highlight(driver: WebDriver, element: WebElement, color: str = "green") -> N
         # sleep(1)
     except JavascriptException as e:
         # Fail silently if highlighting isn't critical, but log trace for debug
-        logger.debug(f"Could not highlight element: {e}")
+        logger.info(f"Could not highlight element: {str(e).splitlines()[0]}")
         pass
 
 
@@ -238,5 +240,5 @@ def scroll(driver: WebDriver, element: WebElement) -> None:
         # sleep(1)
     except JavascriptException as e:
         # Fail silently if scrolling isn't critical, but log trace for debug
-        logger.debug(f"Could not scroll to element: {e}")
+        logger.info(f"Could not scroll to element: {str(e).splitlines()[0]}")
         pass
