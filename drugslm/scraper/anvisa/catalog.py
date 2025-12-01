@@ -45,9 +45,7 @@ from typing_extensions import Annotated
 from drugslm.scraper.anvisa.config import (
     CATEGORIES,
     CATEGORIES_URL,
-    FETCH_COLUMNS,
     INDEX_DIR,
-    SEARCH_COLUMNS,
 )
 from drugslm.scraper.selenium import get_firefox_options, highlight, scroll, webdriver_manager
 from drugslm.utils.asserts import assert_text_number
@@ -63,16 +61,36 @@ XPATH_PAGE_COUNT = "//div[contains(@class, 'ng-table-counts')]"
 
 # ====== OUTPUTS ======
 
-INDEX_FETCHED = INDEX_DIR / "index_fetched.csv"
-INDEX_PROGRESS = INDEX_DIR / "scrap_progress.csv"
-INDEX_CHUNKS = INDEX_DIR / "chunks"
-INDEX_TABLE = INDEX_DIR / "final_table.pkl"
+METADATA = INDEX_DIR / "metadata.csv"
+PROGRESS = INDEX_DIR / "scrap_progress.csv"
+CHUNKS_DIR = INDEX_DIR / "chunks"
+CATALOG = INDEX_DIR / "catalog.pkl"
 
+# ====== COLUMNS =====
+
+CATALOG_COLUMNS = [
+    "category_id",
+    "category_page",
+    "medicamento",
+    "link",
+    "empresa",
+    "expediente",
+    "data_pub",
+]
+
+METADATA_COLUMNS = [
+    "category_id",
+    "page_size",
+    "last_page",
+    "num_items",
+]
+
+# PROGRESS_COLUMNS = [timestamp,category_id,current_page,last_page,saved_size]
 
 # ====== Helpers (Primitives) ======
 
 
-def set_max_table_size(driver: WebDriver) -> int:
+def sel_max_items_page(driver: WebDriver) -> int:
     """
     Attempts to select the highest available "items per page" option (e.g., 50).
     Iterates through options in reverse order.
@@ -84,7 +102,7 @@ def set_max_table_size(driver: WebDriver) -> int:
         driver (WebDriver): The active Selenium WebDriver instance.
 
     Returns:
-        int: The selected page size. Returns 0 if failed.
+        int: The selected items per page. Returns 0 if failed.
     """
     try:
         container = WebDriverWait(driver, 15).until(
@@ -116,7 +134,7 @@ def set_max_table_size(driver: WebDriver) -> int:
         return 0
 
     except Exception as e:
-        logger.critical(f"Element for set_max_table_size not found: {e}")
+        logger.critical(f"Element for sel_max_items_page not found: {e}")
         return 0
 
 
@@ -181,7 +199,7 @@ def table2data(element: WebElement) -> list:
 
 
 @retry(tries=5, delay=2, backoff=1.2)
-def get_pages(driver: WebDriver) -> Tuple[dict, WebElement]:
+def get_pages(driver: WebDriver) -> Tuple[dict, WebElement, WebElement]:
     """
     Captures the current state of pagination controls and the next page element.
 
@@ -320,13 +338,13 @@ def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
     Returns:
         int: The number of rows saved.
     """
-    INDEX_CHUNKS.mkdir(parents=True, exist_ok=True)
+    CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
 
-    output_path = INDEX_CHUNKS / f"{category_id}_{page_num}.pkl"
+    output_path = CHUNKS_DIR / f"{category_id}_{page_num}.pkl"
 
     full_data = [[category_id, page_num] + row for row in raw_data]
 
-    df = pd.DataFrame(data=full_data, columns=SEARCH_COLUMNS)
+    df = pd.DataFrame(data=full_data, columns=CATALOG_COLUMNS)
     df.to_pickle(output_path)
 
     logger.info(f"Table checkpoint saved: {output_path}")
@@ -338,15 +356,15 @@ def join_chunks(force: bool = False) -> None:
     Consolidates all individual page pickle files into a single DataFrame.
 
     Args:
-        force (bool): If True, completely overwrites the existing index file.
-                      If False, merges new chunks with the existing index,
+        force (bool): If True, completely overwrites the existing catalog file.
+                      If False, merges new chunks with the existing catalog,
                       deduplicating based on the 'expediente' column.
     """
 
-    all_files = list(INDEX_CHUNKS.glob("*.pkl"))
+    all_files = list(CHUNKS_DIR.glob("*.pkl"))
 
     if not all_files:
-        logger.warning(f"No pickle files found to consolidate in {INDEX_CHUNKS}.")
+        logger.warning(f"No pickle files found to consolidate in {CHUNKS_DIR}.")
         return
 
     logger.info(f"{len(all_files)} chunks found. Starting consolidation...")
@@ -354,13 +372,13 @@ def join_chunks(force: bool = False) -> None:
     try:
         new_data = pd.concat([pd.read_pickle(f) for f in all_files], ignore_index=True)
 
-        if force or not INDEX_TABLE.exists():
+        if force or not CATALOG.exists():
             logger.info("Overwriting final table.")
             final_df = new_data
         else:
-            logger.info("Merging new chunks with existing index.")
+            logger.info("Merging new chunks with existing catalog.")
             try:
-                old_data = pd.read_pickle(INDEX_TABLE)
+                old_data = pd.read_pickle(CATALOG)
 
                 combined = pd.concat([old_data, new_data])
 
@@ -385,10 +403,10 @@ def join_chunks(force: bool = False) -> None:
                 final_df = new_data
 
         # Save Final Result
-        final_df.to_pickle(INDEX_TABLE)
-        final_df.to_csv(INDEX_TABLE.with_suffix(".csv"), index=False)
+        final_df.to_pickle(CATALOG)
+        final_df.to_csv(CATALOG.with_suffix(".csv"), index=False)
 
-        logger.info(f"Consolidation complete. Saved {len(final_df)} rows to {INDEX_TABLE}")
+        logger.info(f"Consolidation complete. Saved {len(final_df)} rows to {CATALOG}")
 
         # Only delete chunks if consolidation was successful
         delete_chunks()
@@ -407,7 +425,7 @@ def delete_chunks(category_id: int | None = None) -> None:
     """
     # Use glob pattern to match specific category or all files
     pattern = f"{category_id}_*.pkl" if category_id else "*.pkl"
-    all_files = list(INDEX_CHUNKS.glob(pattern))
+    all_files = list(CHUNKS_DIR.glob(pattern))
 
     if not all_files:
         logger.debug(f"No chunks found to delete for pattern: {pattern}")
@@ -418,8 +436,8 @@ def delete_chunks(category_id: int | None = None) -> None:
             f.unlink()
 
         # Try to remove dir if empty and we are cleaning everything
-        if category_id is None and not any(INDEX_CHUNKS.iterdir()):
-            INDEX_CHUNKS.rmdir()
+        if category_id is None and not any(CHUNKS_DIR.iterdir()):
+            CHUNKS_DIR.rmdir()
 
         logger.info(f"Deleted {len(all_files)} chunk files.")
     except Exception as e:
@@ -435,13 +453,13 @@ def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
         pages (dict): Pagination state dictionary {'current', 'next', 'last'}.
         saved_size (int): Number of rows saved in this step.
     """
-    lock_path = INDEX_PROGRESS.with_suffix(".csv.lock")
+    lock_path = PROGRESS.with_suffix(".csv.lock")
 
     with FileLock(lock_path):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        with open(INDEX_PROGRESS, "a") as out:
-            if not INDEX_PROGRESS.exists() or INDEX_PROGRESS.stat().st_size == 0:
+        with open(PROGRESS, "a") as out:
+            if not PROGRESS.exists() or PROGRESS.stat().st_size == 0:
                 out.write("timestamp,category_id,current_page,last_page,saved_size\n")
 
             out.write(
@@ -449,25 +467,25 @@ def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
             )
 
 
-def get_index() -> pd.DataFrame | None:
-    """Loads the final consolidated index. Returns empty DataFrame if not found.
+def get_catalog() -> pd.DataFrame | None:
+    """Loads the final consolidated catalog. Returns empty DataFrame if not found.
 
     Returns:
-        pd.DataFrame: consolidated index DataFrame
+        pd.DataFrame: consolidated catalog DataFrame
         None: if file is missing
     """
     try:
-        df = pd.read_pickle(INDEX_TABLE)
+        df = pd.read_pickle(CATALOG)
         if not df.empty:
             return df
 
     except FileNotFoundError:
-        logger.warning(f"Index table {INDEX_TABLE} not found. Returning None.")
+        logger.warning(f"Index table {CATALOG} not found. Returning None.")
     except Exception as e:
-        logger.error(f"Error reading index table: {e}")
+        logger.error(f"Error reading catalog table: {e}")
 
 
-def get_fetch(category_id: int | None = None) -> pd.DataFrame | None:
+def get_metadata(category_id: int | None = None) -> pd.DataFrame | None:
     """
     Loads the categories metadata file. Returns the whole DF or specific category size.
 
@@ -479,12 +497,12 @@ def get_fetch(category_id: int | None = None) -> pd.DataFrame | None:
         None: If not found or error
     """
 
-    if not INDEX_FETCHED.exists():
-        logger.warning(f"Fetch file not found at {INDEX_FETCHED}. Returning None.")
+    if not METADATA.exists():
+        logger.warning(f"Fetch file not found at {METADATA}. Returning None.")
         return None
 
     try:
-        df = pd.read_csv(INDEX_FETCHED)
+        df = pd.read_csv(METADATA)
 
         if category_id is None:
             logger.info(f"Loaded fetched categories metadata ({len(df)} records).")
@@ -493,19 +511,19 @@ def get_fetch(category_id: int | None = None) -> pd.DataFrame | None:
         row = df.loc[df["category_id"] == category_id]
 
         if row.empty:
-            logger.warning(f"Category {category_id} not found in fetch file.")
+            logger.warning(f"Category {category_id} not found in metadata file.")
             return None
 
         return row
 
     except Exception as e:
-        logger.error(f"Error reading fetched categories CSV: {e}")
+        logger.error(f"Error reading metadata file categories {category_id} : {e}")
         return None
 
 
-def check_index(category_id: int | None = None) -> int:
+def check_catalog(category_id: int | None = None) -> int:
     """
-    Checks the consistency between the local index and the ANVISA database.
+    Checks the consistency between the local catalog and the ANVISA database.
 
     Args:
         category_id (int | None): ID to check specific category consistency.
@@ -515,17 +533,17 @@ def check_index(category_id: int | None = None) -> int:
         f"--- Starting Index Check (Target: {category_id if category_id else 'Global'}) ---"
     )
 
-    if (df_local := get_index()) is None:
-        logger.error("Could not obtain local index for comparison.")
+    if (df_local := get_catalog()) is None:
+        logger.error("Could not obtain local catalog for comparison.")
         return -1
 
     if category_id:
         df_local = df_local[df_local["category_id"] == category_id]
 
     local_size = len(df_local)
-    logger.info(f"Local index found: {local_size} records.")
+    logger.info(f"Local catalog found: {local_size} records.")
 
-    if (df_meta := get_fetch(category_id)) is None:
+    if (df_meta := get_metadata(category_id)) is None:
         logger.error("Could not obtain metadata for comparison.")
         return -1
 
@@ -539,11 +557,11 @@ def check_index(category_id: int | None = None) -> int:
     logger.info("-" * 34)
 
     if diff == 0:
-        logger.info("Local index is complete.")
+        logger.info("Local catalog is complete.")
     elif diff > 0:
         logger.warning(f"Missing {diff} records.")
     else:
-        logger.warning(f"Local index has {-diff} more records than fetched.")
+        logger.warning(f"Local catalog has {-diff} more records than fetched.")
 
     return diff
 
@@ -556,12 +574,12 @@ def get_last_processed_page(category_id: int) -> pd.DataFrame | None:
         pd.DataFrame: last entry found for category_id or None
     """
 
-    if not INDEX_PROGRESS.exists():
+    if not PROGRESS.exists():
         logger.info("Progress file not found")
         return
 
     try:
-        df = pd.read_csv(INDEX_PROGRESS)
+        df = pd.read_csv(PROGRESS)
         df_cat = df[df["category_id"] == category_id]
 
         if not df_cat.empty:
@@ -663,7 +681,7 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
     logger.info(f"Accessing ANVISA search page: {url}")
     driver.get(url)
 
-    current_table_size_pages = set_max_table_size(driver)
+    items_per_page = sel_max_items_page(driver)
 
     if force:
         delete_chunks(category_id)
@@ -674,9 +692,9 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
             logger.info(f"Category {category_id} processing already complete.")
             return
 
-        elif last_processed["saved_size"] != current_table_size_pages:
+        elif last_processed["saved_size"] != items_per_page:
             logger.warning(
-                f"Table size inconsistent,{last_processed['saved_size']} != {current_table_size_pages}"
+                f"Table size inconsistent,{last_processed['saved_size']} != {items_per_page}"
             )
             delete_chunks(category_id)
         else:
@@ -744,7 +762,7 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
     """
     logger.info(f"--- Starting Process for Category {category_id} ---")
 
-    if metadata := get_fetch(category_id):
+    if metadata := get_metadata(category_id):
         expected = metadata["num_items"].sum()
         logger.info(f"Category {category_id}: Expecting {expected} items.")
     else:
@@ -763,7 +781,7 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
 # ====== Fetch Core Business Logic (Process) ======
 
 
-def fetch_unit_category(driver: WebDriver, category_id: int) -> list:
+def fetch_category_metadata(driver: WebDriver, category_id: int) -> list:
     """
     Navigates to the first and last page of a category to estimate data volume.
 
@@ -780,12 +798,12 @@ def fetch_unit_category(driver: WebDriver, category_id: int) -> list:
 
         driver.get(url)
 
-        max_table_size = set_max_table_size(driver)
+        items_per_page = sel_max_items_page(driver)
         pages, _, last_button = get_pages(driver)
 
         table1 = find_table(driver)
         data1 = table2data(table1)
-        page_size = len(data1)
+        page_size = len(data1)  # == items_per_page if not unique page
 
         if pages["last"] > 1:
             logger.debug(f"Category {category_id}: Jumping to last page ({pages['last']})...")
@@ -806,7 +824,7 @@ def fetch_unit_category(driver: WebDriver, category_id: int) -> list:
 
         return [
             category_id,
-            max_table_size,
+            items_per_page,
             pages["last"],
             total_items,
         ]
@@ -856,11 +874,11 @@ def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
     logger.info("Scraping Pipeline Finished")
 
 
-def fetch_categories() -> None:
+def fetch_metadata() -> None:
     """
     Orchestrates metadata fetching for all categories listed in CATEGORIES.
 
-    Generates a CSV file (INDEX_FETCHED) containing the number of items and pages
+    Generates a CSV file (METADATA) containing the number of items and pages
     for each category, which serves as the baseline for validation.
     """
     logger.info("--- Setup Fetch Execution ---")
@@ -876,16 +894,16 @@ def fetch_categories() -> None:
         for category_id in CATEGORIES:
             try:
                 with webdriver_manager(options) as driver:
-                    stats = fetch_unit_category(driver, category_id)
+                    stats = fetch_category_metadata(driver, category_id)
                     fetch_values.append(stats)
             except Exception as e:
                 logger.error(f"Failed to fetch metadata for Category {category_id}: {e}")
                 fetch_values.append([category_id, 0, 0, 0])
 
-        fetch_df = pd.DataFrame(fetch_values, columns=FETCH_COLUMNS)
-        fetch_df.to_csv(INDEX_FETCHED, index=False)
+        fetch_df = pd.DataFrame(fetch_values, columns=METADATA_COLUMNS)
+        fetch_df.to_csv(METADATA, index=False)
 
-        logger.info(f"Fetch complete. Metadata saved to {INDEX_FETCHED}")
+        logger.info(f"Fetch complete. Metadata saved to {METADATA}")
 
     except Exception as e:
         logger.critical(f"Critical error during categories fetch: {e}")
@@ -948,11 +966,11 @@ def run(
     try:
         # 1. Update Metadata (if requested or default)
         if update:
-            fetch_categories()
+            fetch_metadata()
 
         # 2. Check Mode (Exit after check)
         if check:
-            check_index()
+            check_catalog()
             return
 
         # 3. Standard Pipeline Execution
