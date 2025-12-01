@@ -532,9 +532,11 @@ def check_index(category_id: int | None = None) -> int:
     expected_size = df_meta["num_items"].sum()
     diff = expected_size - local_size
 
-    logger.info("=" * 80)
-    logger.info(f"EXPECTED: {expected_size}, FOUND:{local_size}, DIFF:{diff}")
-    logger.info("=" * 80)
+    logger.info("--- Index Consistency Report ---")
+    logger.info(f"Expected (Remote) : {expected_size:>8}")
+    logger.info(f"Found    (Local)  : {local_size:>8}")
+    logger.info(f"Difference        : {diff:>8}")
+    logger.info("-" * 34)
 
     if diff == 0:
         logger.info("Local index is complete.")
@@ -639,18 +641,21 @@ def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
 # ====== Scraper Core Business Logic (Process) ======
 
 
-def scrap_pages(
-    driver: WebDriver, category_id: int, force: bool = False
-) -> None:  # @gemini aqui a magica do force acontece
+def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> None:
     """
     Iterates through all pages of a specific regulatory category, extracting and saving data.
 
     This function handles pagination navigation, saves checkpoints for every page found,
-    and logs the execution progress.
+    and logs the execution progress. It supports resuming execution from the last
+    checkpoint if 'force' is False and the table structure remains consistent.
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
         category_id (int): The ID of the regulatory category to scrape.
+        force (bool): If True, ignores previous progress, deletes existing chunks
+                      for this category, and starts scraping from page 1.
+                      Defaults to False.
+
     """
     search_size = 0
     url = CATEGORIES_URL % str(category_id)
@@ -660,29 +665,24 @@ def scrap_pages(
 
     current_table_size_pages = set_max_table_size(driver)
 
-    # Recursão?
-    try:
-        if not force:
-            last_processed = get_last_processed_page(category_id)
-
-            if last_processed["current_page"] == last_processed["last_page"]:
-                logger.info(f"Category {category_id} processing already complete.")
-                return
-
-            if last_processed["saved_size"] != current_table_size_pages:
-                logger.warning("Table size inconsistent,clearing previous temporary chunks")
-                delete_chunks(category_id)
-            else:
-                goto_last_processed_page(driver, last_processed["current_page"])
-                _, next_button, _ = get_pages(driver)
-                next_button.click()
-        else:
-            logger.info(f"Clearing previous temporary chunks for {category_id} before starting.")
-            delete_chunks(category_id)
-    except Exception as e:
-        logger.error(f"Some error occurs {e}.")
-        logger.info(f"Clearing previous temporary chunks for {category_id} before starting.")
+    if force:
         delete_chunks(category_id)
+    else:
+        last_processed = get_last_processed_page(category_id)
+
+        if last_processed["current_page"] == last_processed["last_page"]:
+            logger.info(f"Category {category_id} processing already complete.")
+            return
+
+        elif last_processed["saved_size"] != current_table_size_pages:
+            logger.warning(
+                f"Table size inconsistent,{last_processed['saved_size']} != {current_table_size_pages}"
+            )
+            delete_chunks(category_id)
+        else:
+            goto_last_processed_page(driver, last_processed["current_page"])
+            _, next_button, _ = get_pages(driver)
+            next_button.click()
 
     # == scraping pages == #
 
@@ -703,7 +703,7 @@ def scrap_pages(
         save_progress(category_id, pages, saved_size)
         search_size += saved_size
 
-        if pages["current"] == pages["last"]:
+        if pages["current"] >= pages["last"]:
             logger.info("Last page reached. Ending scrape.")
             break
 
@@ -726,25 +726,29 @@ def scrap_pages(
 
     logger.info(f"Category {category_id} processing complete. Total rows saved: {search_size}")
 
-    return pages["current"], search_size
-
-
-# Falta 5 FUNÇÕES PARA ANALISAR
-
-------------------------------------------------------------------------------------------------------------------------
 
 def scrap_unit_category(category_id: int, force: bool = False) -> None:
     """
-    Orchestrates the scraping of a single category with pre-fetch validation.
+    Orchestrates the scraping process for a single regulatory category.
+
+    This function acts as an isolated worker that:
+    1. Validates the category against fetched metadata (skipping if empty or missing).
+    2. Manages the lifecycle of a dedicated Selenium WebDriver instance.
+    3. Delegates the actual extraction logic to `scrap_pages`.
+    4. Encapsulates error handling to ensure thread safety and fault tolerance.
+
+    Args:
+        category_id (int): The unique identifier of the regulatory category.
+        force (bool): If True, forces a fresh scrape ignoring previous progress.
+                      Defaults to False.
     """
     logger.info(f"--- Starting Process for Category {category_id} ---")
 
-    if expected_size := get_fetch(category_id):
-        logger.info(
-            f"Category {category_id}: Expecting {expected_size} items."
-        )  # expected_size['size'].sum()
+    if metadata := get_fetch(category_id):
+        expected = metadata["num_items"].sum()
+        logger.info(f"Category {category_id}: Expecting {expected} items.")
     else:
-        logger.warning(f"Skipping Category {category_id}: Fetch is {expected_size}")
+        logger.warning(f"Skipping Category {category_id}: Metadata not found or empty.")
         return
 
     options = get_firefox_options()
@@ -768,67 +772,73 @@ def fetch_unit_category(driver: WebDriver, category_id: int) -> list:
         category_id (int): The regulatory category ID.
 
     Returns:
-        list: [category_id, total_pages, estimated_total_items].
+        list: ["category_id", "page_size", "last_page", "num_items"].
     """
-    url = CATEGORIES_URL % str(category_id)
-    logger.info(f"Fetching metadata for Category {category_id} | URL: {url}")
+    try:
+        url = CATEGORIES_URL % str(category_id)
+        logger.info(f"Fetching metadata for Category {category_id} | URL: {url}")
 
-    driver.get(url)
+        driver.get(url)
 
-    max_table_size = set_max_table_size(driver)
-    pages, _, last_button = get_pages(driver)
+        max_table_size = set_max_table_size(driver)
+        pages, _, last_button = get_pages(driver)
 
-    table1 = find_table(driver)
-    data1 = table2data(table1)
-    page_size = len(data1)
+        table1 = find_table(driver)
+        data1 = table2data(table1)
+        page_size = len(data1)
 
-    if pages["last"] > 1:
-        logger.debug(f"Category {category_id}: Jumping to last page ({pages['last']})...")
-        last_button.click()
-        sleep(1)
+        if pages["last"] > 1:
+            logger.debug(f"Category {category_id}: Jumping to last page ({pages['last']})...")
+            last_button.click()
+            sleep(1)
 
-        table2 = find_table(driver)
-        data2 = table2data(table2)
-        last_page_items = len(data2)
-    else:
-        last_page_items = page_size
+            table2 = find_table(driver)
+            data2 = table2data(table2)
+            last_page_items = len(data2)
+        else:
+            last_page_items = page_size
 
-    total_items = ((pages["last"] - 1) * page_size) + last_page_items
+        total_items = ((pages["last"] - 1) * page_size) + last_page_items
 
-    logger.info(
-        f"Category {category_id} Stats: Pages={pages['last']} | "
-        f"PageSize={page_size} | Total={total_items}"
-    )
+        logger.info(
+            f"Fetched Category {category_id}: {total_items} items ({pages['last']} pages, {page_size} per page)"
+        )
 
-    return [
-        category_id,
-        max_table_size,
-        pages["last"],
-        total_items,
-    ]
+        return [
+            category_id,
+            max_table_size,
+            pages["last"],
+            total_items,
+        ]
+    except Exception:
+        logger.warning(f"Category {category_id} seems empty or failed to load pagination.")
+        return [category_id, 0, 0, 0]
 
 
 # ====== Orchestration (Execution) ======
 
 
-def scrap_categories(n_threads: int = 1, force: bool = False):  # @gemini logs e docstrings
+def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
     """
     Orchestrates the parallel scraping of all categories.
 
     Manages the lifecycle of the scraping process:
-    1. Prepares the environment (cleans chunks if not in 'keep' mode).
+    1. Prepares the environment (cleans chunks if force=True).
     2. Distributes scraping tasks across a thread pool.
     3. Consolidates results into a single file.
-    4. Validates data integrity and performs final cleanup.
 
     Args:
         n_threads (int): Number of concurrent threads to use. Defaults to 1.
-        keep (bool): If True, retains previous temporary chunks to resume execution.
-                     If False, starts fresh by clearing old chunks.
+        force (bool): If True, deletes all previous chunks and starts fresh.
+                      If False, attempts to resume based on progress.
     """
-    logger.info("--- Starting Scraping Pipeline ---")
+    logger.info(f"--- Starting Scraping Pipeline (Threads: {n_threads}, Force: {force}) ---")
 
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
+
+    if force:
+        logger.info("Force=True: Cleaning ALL temporary chunks before starting.")
+        delete_chunks(category_id=None)
 
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
         executor.map(
@@ -839,25 +849,25 @@ def scrap_categories(n_threads: int = 1, force: bool = False):  # @gemini logs e
             CATEGORIES,
         )
 
-    logger.info(
-        "Thread pool execution finished. Consolidating data chunks and check final data..."
-    )
+    logger.info("Thread pool execution finished. Consolidating data chunks...")
 
     join_chunks(force)
 
     logger.info("Scraping Pipeline Finished")
 
 
-def fetch_categories():
+def fetch_categories() -> None:
     """
     Orchestrates metadata fetching for all categories listed in CATEGORIES.
+
+    Generates a CSV file (INDEX_FETCHED) containing the number of items and pages
+    for each category, which serves as the baseline for validation.
     """
     logger.info("--- Setup Fetch Execution ---")
 
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
 
     options = get_firefox_options()
-
     fetch_values = []
 
     logger.info("--- Starting Fetch Routine for All Categories ---")
@@ -885,7 +895,7 @@ def fetch_categories():
 # ====== SCRIPT ENTRY POINT ======
 
 app = typer.Typer(
-    help="CLI for get drug informations from ANVISA.",
+    help="CLI for scraping drug data from ANVISA.",
     pretty_exceptions_show_locals=False,
     add_completion=False,
 )
@@ -909,44 +919,46 @@ def run(
         typer.Option(
             "--force",
             "-f",
-            help="Force execution to start from zero.",
+            help="Force execution to start from zero (Ignores resume).",
             show_default=False,
         ),
-    ] = False,  # gemini todo: outra vez mudando nome de variavel, mas estava pensando que o melhor seria que o comportamento do remain == True fosse o padrão. semanticamente force == False é remain == True. No fim mudei o conceito e a ordem nos ifs
+    ] = False,
     check: Annotated[
         bool,
         typer.Option(
             "--check",
             "-c",
-            help="Only check execution status/updates. Uses --keep logic to decide between fresh fetch or local metadata.",
+            help="Only check execution status (Local Index vs Remote Metadata).",
             show_default=False,
         ),
     ] = False,
     update: Annotated[
         bool,
         typer.Option(
-            "--update",
-            "-u",
-            help="",
+            "--update/--no-update",
+            "-u/-U",
+            help="Fetch fresh metadata from ANVISA before starting.",
             show_default=True,
         ),
     ] = True,
-):
+) -> None:
     """
     Runs the ANVISA drug listing scraper pipeline.
     """
-
     try:
+        # 1. Update Metadata (if requested or default)
         if update:
             fetch_categories()
 
+        # 2. Check Mode (Exit after check)
         if check:
             check_index()
             return
 
+        # 3. Standard Pipeline Execution
         logger.info(f"Starting pipeline (Threads: {n_threads}, Force: {force})...")
 
-        scrap_categories(n_threads, force, update)
+        scrap_categories(n_threads=n_threads, force=force)
 
         logger.info(f"Pipeline execution complete. Log: {log_file_path.resolve()}")
 
