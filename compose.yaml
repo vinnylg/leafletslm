@@ -1,18 +1,19 @@
+x-build-config: &build_config
+  context: .
+  args:
+    - USER=${USER}
+    - UID=${UID}
+    - GID=${GID}
+
 services:
   drugslm:
-    build:
-      context: .
-      args:
-        - USER=${USER}
-        - UID=${UID}
-        - GID=${GID}
+    build: *build_config
     image: ${PROJECT}:${VERSION}
     container_name: drugslm_base
     volumes:
       - ./:/workspace
     networks:
       - drugslm_net
-
     command: make sleep
     tty: true
     stdin_open: true
@@ -20,17 +21,17 @@ services:
       - .env
 
   mkdocs:
-    depends_on:
-      - drugslm
+    build: *build_config
     image: ${PROJECT}:${VERSION}
     container_name: drugslm_docs
+    depends_on:
+      - drugslm
     volumes:
       - ./:/workspace
     networks:
       - drugslm_net
     ports:
       - "8000:8000"
-
     command: make docs serve
     tty: true
     stdin_open: true
@@ -38,17 +39,17 @@ services:
       - .env
 
   dagster:
-    depends_on:
-      - drugslm
+    build: *build_config
     image: ${PROJECT}:${VERSION}
     container_name: drugslm_dagster
+    depends_on:
+      - drugslm
     volumes:
       - ./:/workspace
     networks:
       - drugslm_net
     ports:
       - "3000:3000"
-
     command: make dagster up
     tty: true
     stdin_open: true

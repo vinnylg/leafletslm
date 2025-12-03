@@ -46,7 +46,7 @@ COPY --chown=${UID}:${GID} . .
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Try to use uv.lock but if it doesn't works run without it (this force update)
-RUN uv sync --all-extras --locked || uv sync --all-extras
+RUN uv sync --all-extras --locked || echo "uv.lock not found" && uv sync --all-extras
 
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc && \
@@ -54,4 +54,7 @@ RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
 
 RUN which python && python --version && python -c "import drugslm; print(f'{drugslm}')"
 
-ENTRYPOINT ["make", "sleep"]
+# ENTRYPOINT ["make"]
+
+CMD ["make", "sleep"]
+

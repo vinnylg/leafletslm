@@ -4,25 +4,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "drugslm"
-# version = "0.0.1"
 dynamic = ["version"]
-
-[tool.hatch.version]
-path = ".env"
-pattern = "VERSION=['\"]?(?P<version>[^'\"]+)['\"]?"
-
-description = "Consolidated repository for ETL, modeling, experiments, and deployment of the master's thesis in Computer Science at the Department of Computer Science of the Federal University of Paran\u00e1, Curitiba - Brazil, focusing on the development of a Small Language Model (SLM) using drug package inserts."
+description = "Consolidated repository for ETL, modeling, experiments, and deployment of the master's thesis in Computer Science at the Department of Computer Science of the Federal University of Paraná, Curitiba - Brazil, focusing on the development of a Small Language Model (SLM) using drug package inserts."
+readme = "README.md"
+requires-python = "~=3.12.0"
+license = { file = "LICENSE" }
 authors = [
   { name = "Vinícius de Lima Gonçalves" },
 ]
-license = { file = "LICENSE" }
-readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: BSD License"
 ]
-requires-python = "~=3.12.0"
-
 dependencies = [
     "beautifulsoup4>=4.14.2",
     "dagster==1.12.1",
@@ -47,13 +40,23 @@ dev = [
     "ruff>=0.14.4",
 ]
 
+# -----------------------------------------------------------------------------
+# TOOL CONFIGURATION (Hatch)
+# -----------------------------------------------------------------------------
+
+[tool.hatch.version]
+path = ".env"
+pattern = "VERSION=['\"]?(?P<version>[^'\"\\s]+)['\"]?"
+
 [tool.hatch.build]
-packages = [
-    "drugslm"
-]
+packages = ["drugslm"]
 
 [tool.hatch.build.targets.wheel]
 force-include = { "pyproject.toml" = "pyproject.toml" }
+
+# -----------------------------------------------------------------------------
+# TOOL CONFIGURATION (Ruff)
+# -----------------------------------------------------------------------------
 
 [tool.ruff]
 line-length = 99
@@ -61,7 +64,7 @@ src = ["drugslm"]
 include = ["pyproject.toml", "drugslm/**/*.py"]
 
 [tool.ruff.lint]
-extend-select = ["I"]  # Add import sorting
+extend-select = ["I"]  # Import sorting
 
 [tool.ruff.lint.isort]
 known-first-party = ["drugslm"]
