@@ -18,9 +18,14 @@ plugins:
           options:
             show_source: true
             show_root_heading: true
-  - kroki:
-      ServerURL: http://kroki.lilith.hell/
-      FencePrefix: ""
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
@@ -30,7 +35,7 @@ nav:
       - scraper:
           - anvisa:
               - reference/scraper/anvisa/anvisa.md
-              - build_index: reference/scraper/anvisa/build_index.md
+              - catalog: reference/scraper/anvisa/catalog.md
               - pipelines: reference/scraper/anvisa/pipelines.md
               - config: reference/scraper/anvisa/config.md
           - selenium: reference/scraper/selenium.md
