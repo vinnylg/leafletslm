@@ -503,7 +503,7 @@ def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
     Appends execution metadata to a CSV file with file locking for concurrency safety.
 
     Args:
-        category (int): The category ID.
+        category_id (int): The category ID.
         pages (dict): Pagination state dictionary {'current', 'next', 'last'}.
         saved_size (int): Number of rows saved in this step.
     """
