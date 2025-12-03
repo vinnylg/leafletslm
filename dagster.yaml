@@ -1,16 +1,50 @@
-run_launcher:
-  module: dagster.core.launcher
-  class: DefaultRunLauncher
-
+# 1. Armazenamento de metadados (Runs, Events, etc)
 storage:
   sqlite:
     base_dir: /workspace/.dagster/storage
 
-telemetry:
-  enabled: false
+# 2. Logs de computação (stdout/stderr dos processos)
+# Isso redireciona os arquivos brutos para fora da raiz
+compute_logs:
+  module: dagster.core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir: /workspace/.dagster/compute_logs
+    polling_interval: 1
 
+# 3. Execução (Launchers)
+# DefaultRunLauncher sobe processos no mesmo container/máquina.
+# Ideal para dev. Em prod/K8s, usaria K8sRunLauncher.
+run_launcher:
+  module: dagster.core.launcher
+  class: DefaultRunLauncher
+
+# 4. Controle de Concorrência
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
   config:
     max_concurrent_runs: 16
+    tag_concurrency_limits:
+      - key: "database"
+        value: "postgres"
+        limit: 2
+
+# 5. Agendador (ADICIONADO)
+# Sem isso, seus @schedule não rodam automaticamente,
+# mesmo que o daemon esteja ativo.
+scheduler:
+  module: dagster.core.scheduler
+  class: DagsterDaemonScheduler
+
+# 6. Captura de Logs Python (ADICIONADO)
+# Permite ver logs da biblioteca 'logging' do Python direto na UI do Dagster.
+python_logs:
+  python_log_level: INFO
+  managed_python_loggers:
+    - drugslm
+    - root
+
+# 7. Telemetria
+telemetry:
+  enabled: false
