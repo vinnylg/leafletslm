@@ -6,19 +6,55 @@ services:
         - USER=${USER}
         - UID=${UID}
         - GID=${GID}
-    image: vri/drugslm:0.0.1
-    container_name: drugslm
+    image: ${PROJECT}:${VERSION}
+    container_name: drugslm_base
     volumes:
       - ./:/workspace
-    # networks:
-    #   - drugslm
-    ports:
-      - "3000:3000"
-      - "8000:8000"
+    networks:
+      - drugslm_net
+
+    command: make sleep
     tty: true
     stdin_open: true
     env_file:
       - .env
-# networks:
-#   drugslm_net:
-#     name: drugslm
+
+  mkdocs:
+    depends_on:
+      - drugslm
+    image: ${PROJECT}:${VERSION}
+    container_name: drugslm_docs
+    volumes:
+      - ./:/workspace
+    networks:
+      - drugslm_net
+    ports:
+      - "8000:8000"
+
+    command: make docs serve
+    tty: true
+    stdin_open: true
+    env_file:
+      - .env
+
+  dagster:
+    depends_on:
+      - drugslm
+    image: ${PROJECT}:${VERSION}
+    container_name: drugslm_dagster
+    volumes:
+      - ./:/workspace
+    networks:
+      - drugslm_net
+    ports:
+      - "3000:3000"
+
+    command: make dagster up
+    tty: true
+    stdin_open: true
+    env_file:
+      - .env
+
+networks:
+  drugslm_net:
+    name: drugslm_net

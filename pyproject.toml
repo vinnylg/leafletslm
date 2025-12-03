@@ -4,7 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "drugslm"
-version = "0.0.1"
+# version = "0.0.1"
+dynamic = ["version"]
+
+[tool.hatch.version]
+path = ".env"
+pattern = "VERSION=['\"]?(?P<version>[^'\"]+)['\"]?"
+
 description = "Consolidated repository for ETL, modeling, experiments, and deployment of the master's thesis in Computer Science at the Department of Computer Science of the Federal University of Paran\u00e1, Curitiba - Brazil, focusing on the development of a Small Language Model (SLM) using drug package inserts."
 authors = [
   { name = "Vinícius de Lima Gonçalves" },
@@ -34,7 +40,6 @@ dev = [
     "dagster-webserver==1.12.1",
     "ipykernel>=7.1.0",
     "mkdocs>=1.6.1",
-    "mkdocs-kroki-plugin>=0.9.0",
     "mkdocs-material>=9.7.0",
     "mkdocstrings[python]>=0.30.1",
     "pip>=25.3",
