@@ -48,3 +48,7 @@ python_logs:
 # 7. Telemetria
 telemetry:
   enabled: false
+
+# Desativa o "New User Experience" (o tour guiado da interface)
+nux:
+  enabled: false

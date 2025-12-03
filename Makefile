@@ -16,9 +16,9 @@ UV = uv
 install:
 	$(UV) sync --locked --all-extras
 
-## Install/Update dependencies for Development. Updates lockfile automatically if needed.
-.PHONY: dev
-dev:
+## Install or update dependencies even though lockfile is outdated.
+.PHONY: update
+update:
 	$(UV) sync --all-extras
 
 #################################################################################
@@ -45,16 +45,19 @@ test:
 ## Delete all compiled Python files, build artifacts and caches
 .PHONY: clean
 clean:
+	@echo ">>> Starting cleanup files, build artifacts and caches"
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
-	# Dagster logs
-	find . -type d -name ".logs_queue" -exec rm -rf {} +
-	# Possivel artefato Nuxt ou similar
-	find . -type d -name ".nux" -exec rm -rf {} +
 	@echo ">>> Project cleanup complete"
+
+#
+#	# Dagster logs
+#	find . -type d -name ".logs_queue" -exec rm -rf {} +
+#	find . -type d -name ".nux" -exec rm -rf {} +
+#
 
 #################################################################################
 # DAGSTER CONTROLLER                                                            #
@@ -67,6 +70,7 @@ ifeq (dagster,$(firstword $(MAKECMDGOALS)))
   $(eval $(DAGSTER_ARGS):;@:)
 endif
 
+## Manage Dagster environment (Args: up, down, restart, clean)
 .PHONY: dagster
 dagster:
 	@if [ -z "$(DAGSTER_ARGS)" ]; then \
@@ -108,18 +112,28 @@ ifeq (docs,$(firstword $(MAKECMDGOALS)))
   $(eval $(DOCS_ARGS):;@:)
 endif
 
+## Manage Documentation (Args: up, down, restart, build, deploy)
 .PHONY: docs
 docs:
 	@if [ -z "$(DOCS_ARGS)" ]; then \
 		echo "Usage: make docs [COMMAND]"; \
 		echo ""; \
 		echo "Commands:"; \
-		echo "  serve       Serve documentation locally (0.0.0.0:8000)"; \
+		echo "  up       Serve documentation locally (0.0.0.0:8000)"; \
+		echo "  down     Stop documentation server"; \
+		echo "  restart  Restart the documentation server"; \
 		echo "  build    Build static documentation to site/"; \
 		echo "  deploy   Deploy documentation to GitHub Pages"; \
 		echo ""; \
-	elif [ "$(DOCS_ARGS)" = "serve" ]; then \
+	elif [ "$(DOCS_ARGS)" = "up" ]; then \
+		echo ">>> Serving documentation..."; \
 		mkdocs serve -f docs/mkdocs.yml -a 0.0.0.0:8000; \
+	elif [ "$(DOCS_ARGS)" = "down" ]; then \
+		echo ">>> Stopping documentation server..."; \
+		pkill -f "mkdocs serve" || echo "Mkdocs not running"; \
+	elif [ "$(DOCS_ARGS)" = "restart" ]; then \
+		$(MAKE) docs down; \
+		$(MAKE) docs up; \
 	elif [ "$(DOCS_ARGS)" = "build" ]; then \
 		mkdocs build -f docs/mkdocs.yml; \
 	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
@@ -131,9 +145,10 @@ docs:
 
 
 #################################################################################
-# START CONTROLLER                                                      #
+# START CONTROLLER                                                              #
 #################################################################################
 
+## Sleep infinity (Useful for keeping container alive for attaching)
 .PHONY: sleep
 sleep:
 	@echo "sleeping infinity waiting for attach"

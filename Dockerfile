@@ -54,7 +54,7 @@ RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
 
 RUN which python && python --version && python -c "import drugslm; print(f'{drugslm}')"
 
-# ENTRYPOINT ["make"]
+# ENTRYPOINT ["some infos about project?"] 
 
 CMD ["make", "sleep"]
 

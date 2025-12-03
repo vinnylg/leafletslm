@@ -15,6 +15,8 @@ data/raw/*
 !data/raw/.gitkeep
 
 *.tmp*
+# Maybe mkdocs
+.nux
 
 # Dagster
 .dagster/*
