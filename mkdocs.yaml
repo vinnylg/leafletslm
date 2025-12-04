@@ -14,7 +14,7 @@ plugins:
       default_handler: python
       handlers:
         python:
-          paths: [..]
+          paths: [.]
           options:
             show_source: true
             show_root_heading: true
@@ -39,8 +39,3 @@ nav:
               - pipelines: reference/scraper/anvisa/pipelines.md
               - config: reference/scraper/anvisa/config.md
           - selenium: reference/scraper/selenium.md
-#
-# !TODO: not working because docker inotify?
-# watch:
-#   - ../drugslm
-#   - .
