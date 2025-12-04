@@ -10,12 +10,10 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 HUB_URL = os.getenv("HUB_URL")
-# BROWSER_NODES = int(os.getenv("BROWSER_NODES"), 0)
 logger.info(f"HUB_URL address is {HUB_URL}")
 
 
-# PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT"))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 logger.info(f"PROJECT_ROOT path is: {PROJECT_ROOT}")
 
 
