@@ -14,7 +14,6 @@ services:
     container_name: drugslm_base
     volumes:
       - ./:/workspace
-      - venv:/workspace/.venv
     networks:
       - drugslm_net
     command: make sleep
@@ -28,11 +27,10 @@ services:
     image: drugslm:${VERSION}
     pull_policy: build
     container_name: drugslm_docs
-    # depends_on:
-    #   - drugslm
+    depends_on:
+      - drugslm
     volumes:
       - ./:/workspace
-      - venv:/workspace/.venv
     networks:
       - drugslm_net
     ports:
@@ -40,8 +38,6 @@ services:
     command: make docs up
     tty: true
     stdin_open: true
-    # environment:
-    #   - PYTHONUNBUFFERED=1
     env_file:
       - .env
 
@@ -50,11 +46,10 @@ services:
     image: drugslm:${VERSION}
     pull_policy: build
     container_name: drugslm_dagster
-    # depends_on:
-    #   - drugslm
+    depends_on:
+      - drugslm
     volumes:
       - ./:/workspace
-      - venv:/workspace/.venv
     networks:
       - drugslm_net
     ports:
@@ -71,5 +66,3 @@ networks:
   drugslm_net:
     name: drugslm_net
 
-volumes:
-  venv:
