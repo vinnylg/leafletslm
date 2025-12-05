@@ -1,5 +1,6 @@
 x-build-config: &build_config
   context: .
+  target: dev
   args:
     - USER=${USER}
     - UID=${UID}
@@ -8,10 +9,12 @@ x-build-config: &build_config
 services:
   drugslm:
     build: *build_config
-    image: ${PROJECT}:${VERSION}
+    image: drugslm:${VERSION}
+    pull_policy: build
     container_name: drugslm_base
     volumes:
       - ./:/workspace
+      - venv:/workspace/.venv
     networks:
       - drugslm_net
     command: make sleep
@@ -22,30 +25,36 @@ services:
 
   mkdocs:
     build: *build_config
-    image: ${PROJECT}:${VERSION}
+    image: drugslm:${VERSION}
+    pull_policy: build
     container_name: drugslm_docs
-    depends_on:
-      - drugslm
+    # depends_on:
+    #   - drugslm
     volumes:
       - ./:/workspace
+      - venv:/workspace/.venv
     networks:
       - drugslm_net
     ports:
       - "8000:8000"
-    command: make docs serve
+    command: make docs up
     tty: true
     stdin_open: true
+    # environment:
+    #   - PYTHONUNBUFFERED=1
     env_file:
       - .env
 
   dagster:
     build: *build_config
-    image: ${PROJECT}:${VERSION}
+    image: drugslm:${VERSION}
+    pull_policy: build
     container_name: drugslm_dagster
-    depends_on:
-      - drugslm
+    # depends_on:
+    #   - drugslm
     volumes:
       - ./:/workspace
+      - venv:/workspace/.venv
     networks:
       - drugslm_net
     ports:
@@ -53,9 +62,14 @@ services:
     command: make dagster up
     tty: true
     stdin_open: true
+    environment:
+      - DAGSTER_HOME=/workspace
     env_file:
       - .env
 
 networks:
   drugslm_net:
     name: drugslm_net
+
+volumes:
+  venv:

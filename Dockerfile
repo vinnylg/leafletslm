@@ -1,6 +1,6 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS dev
 
-ARG USER=devel
+ARG USER=devil
 ARG UID=1000
 ARG GID=1000
 
@@ -9,10 +9,11 @@ EXPOSE 8000
 
 ENV TERM=xterm-256color
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
+
+ENV VENV_PATH=".venv"
+ENV PATH="$VENV_PATH/bin:$PATH"
+ENV UV_PROJECT_ENVIRONMENT="$VENV_PATH"
 ENV UV_LINK_MODE=copy
-ENV VIRTUAL_ENV="/opt/venv"
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-ENV UV_PROJECT_ENVIRONMENT="$VIRTUAL_ENV"
 
 RUN apt-get update && apt-get install -y sudo \
     git \
@@ -37,24 +38,27 @@ RUN if id -u ${USER} >/dev/null 2>&1; then \
 RUN echo "${USER} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
     chmod 0440 /etc/sudoers.d/${USER}
 
-RUN mkdir -p /opt/venv && chown ${UID}:${GID} /opt/venv
-
 USER ${USER}
-WORKDIR /workspace
-COPY --chown=${UID}:${GID} . .
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Try to use uv.lock but if it doesn't works run without it (this force update)
-RUN uv sync --all-extras --locked || echo "uv.lock not found" && uv sync --all-extras
-
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc && \
-    echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
+    echo 'source $VENV_PATH/bin/activate' >> ~/.bashrc
 
-RUN which python && python --version && python -c "import drugslm; print(f'{drugslm}')"
+WORKDIR /workspace
 
-# ENTRYPOINT ["some infos about project?"] 
+COPY --chown=${UID}:${GID} entrypoint.sh .
+RUN chmod +x ./entrypoint.sh
 
-CMD ["make", "sleep"]
+ENTRYPOINT ["./entrypoint.sh"]
 
+FROM dev AS prod
+
+COPY --chown=${UID}:${GID} . .
+
+## vou deixar incompleto mesmo, mas aqui não vai ser usado volumes e sera configurado tudo na imagem
+# 
+# CMD ["python", "-m", "drugslm"]
+#
+##

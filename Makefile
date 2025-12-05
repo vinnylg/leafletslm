@@ -154,47 +154,40 @@ build:
 
 ## Install EVERYTHING (Main + All Extras/Groups)
 .PHONY: dev
-dev: 
-	@echo ">>> Development environment: full dependencies."
+dev:
+	@echo ">>> Setting up full development environment..."
 	$(MAKE) sync-dev
 	$(MAKE) info
 
-# Produce a clean production lockfile (only main deps, no groups/extras)
-.PHONY: lock-prod
-lock-prod:
-	@echo ">>> Creating a fresh production lockfile (main deps only)..."
-	@if [ -f $(LOCKFILE) ]; then rm $(LOCKFILE); fi
-	uv lock --no-dev
-
-# Produce a full development lockfile (all groups and all extras)
-.PHONY: lock-dev
-lock-dev:
-	@echo ">>> Creating a complete lockfile with all extras and groups..."
-	@if [ -f $(LOCKFILE) ]; then rm $(LOCKFILE); fi
-	uv lock --all-extras --all-groups
-
-# Sync production environment using the lockfile (fallback included)
-.PHONY: sync-prod
-sync-prod:
-	@echo ">>> Syncing production environment using lockfile..."
-	@if uv sync --locked --no-dev; then \
-	    echo '>>> Production sync completed using lockfile.'; \
-	else \
-	    echo '>>> Lockfile missing or invalid. Rebuilding production lockfile...'; \
-	    $(MAKE) lock-prod; \
-	    uv sync --locked --no-dev; \
-	fi
+# Generate lock for dev and prod. The lockfile is always total
+.PHONY: lock
+lock:
+	@echo ">>> Creating a full lockfile based on pyproject..."
+	@rm -f $(LOCKFILE)
+	uv lock
 
 # Sync development environment using the lockfile (fallback included)
 .PHONY: sync-dev
 sync-dev:
-	@echo ">>> Syncing development environment using lockfile..."
+	@echo ">>> Syncing full development environment..."
 	@if uv sync --locked --all-extras --all-groups; then \
-	    echo '>>> Dev sync completed using existing lockfile.'; \
+	    echo ">>> Dev sync OK (using lockfile)."; \
 	else \
-	    echo '>>> Lockfile missing or invalid. Rebuilding full dev lockfile...'; \
-	    $(MAKE) lock-dev; \
+	    echo ">>> Lockfile missing or invalid. Rebuilding lock..."; \
+	    $(MAKE) lock; \
 	    uv sync --locked --all-extras --all-groups; \
+	fi
+
+# Sync production environment using the lockfile (fallback included)
+.PHONY: sync-prod
+sync-prod:
+	@echo ">>> Syncing production environment..."
+	@if uv sync --locked --no-dev; then \
+	    echo ">>> Prod sync OK (using lockfile)."; \
+	else \
+	    echo ">>> Lockfile missing or invalid. Rebuilding lock..."; \
+	    $(MAKE) lock; \
+	    uv sync --locked --no-dev; \
 	fi
 
 ## Check environment info
