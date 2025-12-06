@@ -7,9 +7,11 @@ theme:
     - navigation.sections
     - content.code.copy
     - navigation.indexes
+    - navigation.top
 
 plugins:
   - search
+  - include-markdown
   - mkdocstrings:
       default_handler: python
       handlers:
@@ -30,12 +32,15 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Architecture: architecture.md
-  - Docs:
-      - reference/reference.md
-      - scraper:
-          - anvisa:
-              - reference/scraper/anvisa/anvisa.md
-              - catalog: reference/scraper/anvisa/catalog.md
-              - pipelines: reference/scraper/anvisa/pipelines.md
-              - config: reference/scraper/anvisa/config.md
-          - selenium: reference/scraper/selenium.md
+  - API Reference:
+      - reference/index.md
+      - Scrapers:
+          - reference/scraper/index.md
+          - Anvisa:
+              - reference/scraper/anvisa/index.md
+              - Pipelines: reference/scraper/anvisa/pipelines.md
+              - Catalog Builder: reference/scraper/anvisa/catalog.md
+              - Config: reference/scraper/anvisa/config.md
+          - Wikipedia: []
+          - Infrastructure (Selenium): reference/scraper/selenium.md
+      - Modeling: []
