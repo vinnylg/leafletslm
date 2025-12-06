@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-LOCK="/workspace/.entrypoint.lock"
-VENV="/workspace/.venv"
+LOCK=".entrypoint.lock"
 
 echo ">>> [entrypoint] Attempting to acquire lock..."
 

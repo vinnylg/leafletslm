@@ -1,5 +1,5 @@
 {
-  "name": "drugslm DevContainer",
+  "name": "DrugSLM DevContainer",
   "dockerComposeFile": ["../compose.yaml"],
   "service": "drugslm",
   "overrideCommand": true,

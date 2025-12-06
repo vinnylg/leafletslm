@@ -38,6 +38,7 @@ services:
     command: make docs up
     tty: true
     stdin_open: true
+    restart: unless-stopped
     env_file:
       - .env
 
@@ -54,15 +55,12 @@ services:
       - drugslm_net
     ports:
       - "3000:3000"
-    command: make dagster up
+    command: make dagster # up
     tty: true
     stdin_open: true
-    environment:
-      - DAGSTER_HOME=/workspace
     env_file:
       - .env
 
 networks:
   drugslm_net:
     name: drugslm_net
-

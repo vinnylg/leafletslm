@@ -10,9 +10,8 @@ EXPOSE 8000
 ENV TERM=xterm-256color
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
 
-ENV VENV_PATH=".venv"
-ENV PATH="$VENV_PATH/bin:$PATH"
-ENV UV_PROJECT_ENVIRONMENT="$VENV_PATH"
+ENV PATH="/workspace/.venv/bin:$PATH"
+ENV UV_PROJECT_ENVIRONMENT="/workspace/.venv"
 ENV UV_LINK_MODE=copy
 
 RUN apt-get update && apt-get install -y sudo \
@@ -21,6 +20,7 @@ RUN apt-get update && apt-get install -y sudo \
     make \
     curl \
     tree \
+    procps \
     entr \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/* &&\
@@ -45,7 +45,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc && \
-    echo 'source $VENV_PATH/bin/activate' >> ~/.bashrc
+    echo 'source /workspace/.venv/bin/activate' >> ~/.bashrc
 
 WORKDIR /workspace
 
@@ -56,7 +56,9 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 FROM dev AS prod
 
-COPY --chown=${UID}:${GID} . .
+RUN echo "Not implemented yet"
+
+# COPY --chown=${UID}:${GID} . .
 
 ## vou deixar incompleto mesmo, mas aqui não vai ser usado volumes e sera configurado tudo na imagem
 # 
