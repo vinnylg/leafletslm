@@ -6,46 +6,23 @@ DrugsLM is a specialized Small Language Model (SLM) trained on drug package inse
 
 ---
 
-<!-- ## 🎯 Project Vision
+## 🎓 Academic Context
 
-Traditional large language models often struggle with domain-specific medical information, particularly in non-English languages. DrugsLM addresses this by:
+This project is part of a Master's thesis in Computer Science at the **Federal University of Paraná (UFPR)**, Curitiba, Brazil. The research focuses on:
 
-- **Specialized Training**: Focused exclusively on pharmaceutical data from regulatory agencies
-- **Multilingual Support**: Primary focus on Portuguese (ANVISA) with English expansion (Wikipedia, Drugs.com)
-- **Accuracy First**: Built from verified, authoritative sources rather than general web data
-- **Efficient Design**: Small Language Model approach for faster inference and lower computational costs
+- Domain-specific language model development
+- Efficient training strategies for Small Language Models
+- Medical information extraction and structuring
+- Multilingual pharmaceutical knowledge representation
 
---- -->
-
-## 🚀 Quick Start
-
-Get started with DrugsLM in minutes:
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>📖 Getting Started</h3>
-    <p>Setup your environment and run your first scraper</p>
-    <a href="getting-started/">Read the Guide →</a>
-  </div>
-  
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>🏗️ Architecture</h3>
-    <p>Understand the data pipeline and system design</p>
-    <a href="architecture/">View Architecture →</a>
-  </div>
-  
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>📚 API Reference</h3>
-    <p>Explore modules, scrapers, and code documentation</p>
-    <a href="reference/">Browse API Docs →</a>
-  </div>
-</div>
+**Researcher**: Vinícius de Lima Gonçalves  
+**Institution**: Department of Computer Science, UFPR
 
 ---
 
-## 📊 Data Pipeline Overview
+## 📋 Project Roadmap
 
-The project implements a comprehensive ETL pipeline for pharmaceutical data acquisition and processing:
+The diagram below illustrates the complete data acquisition and processing roadmap for this project, organized as a data-centric asset graph showing what has been completed, what's in progress, and what's planned.
 
 ```mermaid
 flowchart TD
@@ -65,6 +42,10 @@ flowchart TD
     Wiki[Wikipedia Drug Categories]:::future
     WikiPage[Wikipedia Drug Articles]:::future
     
+    Drugs[Drugs.com site Exploration]:::future
+    DrugsCat[Drugs.com Catalog Scraper]:::future
+    DrugsPage[Drugs.com Drug Pages]:::future
+    
     SST[Simple Structured Text]:::mvp
     NER[Named Entity Recognition]:::future
     RST[Related Structured Text]:::future
@@ -75,86 +56,66 @@ flowchart TD
 
     Begin ==> Catalog ==> AnvisaPage ==> PDF ==> SST
     Begin -.-> WikiAPI -.-> Wiki -.-> WikiPage -.-> SST
+    Begin -.-> Drugs -.-> DrugsCat -.-> DrugsPage -.-> SST
             
     SST =====> VDB
     SST -.-> NER -.-> RST -.-> GST -.-> GDB
+    
+    class Drugs dead
+    class DrugsCat dead
+    class DrugsPage dead
+
+    click Catalog "reference/scraper/anvisa/catalog/" "See Catalog Activity Diagram"
 ```
 
-**Legend**: 🟢 Complete | 🟡 In Progress | 🔴 MVP Phase | ⚪ Plus
+**Legend**: 🟢 Complete | 🟡 In Progress | 🔴 MVP Phase | ⚪ Planned | ⚫ Dropped
 
 ---
 
-## 🏛️ Data Sources
+## 🚀 Quick Start
 
-### Primary Sources (Active)
-- **ANVISA** (Agência Nacional de Vigilância Sanitária): Brazilian regulatory agency drug database
-  - Drug catalog with registration details
-  - Official package inserts (bulas) in PDF format
-  <!-- - ~40,000+ registered medications -->
-
-### Planned Sources
-- **Wikipedia**: Multilingual drug information articles
-- **PubMed/Medical Literature**: Scientific papers and drug studies
-
----
-
-## 🛠️ Technology Stack
-
-**Core Pipeline**:
-- **Dagster**: Orchestration and data lineage
-- **Selenium**: Web scraping infrastructure
-- **Docker**: Containerized development and deployment
-
-**Data Processing**:
-- **Pandas**: Data manipulation and analysis
-- **BeautifulSoup**: HTML parsing
-- **PostgreSQL**: Relational data storage
-- **Neo4j**: Graph database (planned)
-
-**Model Development**:
-- **Ollama**: Local LLM experimentation
-- Vector databases for semantic search
-- Custom fine-tuning pipeline (in development)
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>📖 Getting Started</h3>
+    <p>Environment setup, Docker guide, and first scraper execution</p>
+    <a href="getting-started/">Installation Guide →</a>
+  </div>
+  
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>🏗️ Architecture</h3>
+    <p>Technical decisions, data flows, and design patterns</p>
+    <a href="architecture/">System Design →</a>
+  </div>
+  
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>🛠️ Infrastructure</h3>
+    <p>Container setup, Selenium Grid, and hardware specs</p>
+    <a href="infrastructure/">Deployment Info →</a>
+  </div>
+  
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>📚 API Reference</h3>
+    <p>Module documentation, scrapers, and code examples</p>
+    <a href="reference/">Browse API Docs →</a>
+  </div>
+</div>
 
 ---
 
-## 📁 Project Structure
+**Next Steps**: [Set up your development environment →](getting-started.md)
 
-```
-drugslm/
-├── scraper/          # Data acquisition modules
-│   ├── anvisa/       # ANVISA scraper (active)
-│   ├── wikipedia/    # Wikipedia scraper (planned)
-│   └── selenium.py   # Shared browser automation
-├── modeling/         # Model training and evaluation
-├── features/         # Feature engineering
-├── database/         # Database connectors
-│   ├── pg/          # PostgreSQL
-│   └── neo4j/       # Neo4j (planned)
-└── utils/           # Shared utilities
-```
+<!--
+## 🎯 Project Vision
 
----
+Traditional large language models often struggle with domain-specific medical information, particularly in non-English languages. DrugsLM addresses this by:
 
-## 🎓 Academic Context
+- **Specialized Training**: Focused exclusively on pharmaceutical data from regulatory agencies
+- **Multilingual Support**: Primary focus on Portuguese (ANVISA) with English expansion (Wikipedia, Drugs.com)
+- **Accuracy First**: Built from verified, authoritative sources rather than general web data
+- **Efficient Design**: Small Language Model approach for faster inference and lower computational costs
 
-This project is part of a Master's thesis in Computer Science at the **Federal University of Paraná (UFPR)**, Curitiba, Brazil. The research focuses on:
-
-- Domain-specific language model development
-- Efficient training strategies for Small Language Models
-- Medical information extraction and structuring
-- Multilingual pharmaceutical knowledge representation
-
-**Researcher**: Vinícius de Lima Gonçalves  
-**Institution**: Department of Computer Science, UFPR
-
----
-
-## 📄 License
-
-This project is licensed under the BSD License. See [LICENSE](https://github.com/yourusername/drugslm/blob/main/LICENSE) for details.
-
----
+TODO: Refine this section with a more academic tone or move to a different location
+-->
 
 ## 🤝 Contributing
 
@@ -162,4 +123,6 @@ This is an active research project. If you're interested in collaborating or hav
 
 ---
 
-**Next Steps**: [Set up your development environment →](getting-started.md)
+## 📄 License
+
+This project is licensed under the BSD License. See [LICENSE](https://github.com/yourusername/drugslm/blob/main/LICENSE) for details.

@@ -31,16 +31,19 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Infrastructure: infrastructure.md
   - Architecture: architecture.md
   - API Reference:
       - reference/index.md
-      - Scrapers:
+      - Scraper:
           - reference/scraper/index.md
+          - Selenium: reference/scraper/selenium.md
           - Anvisa:
               - reference/scraper/anvisa/index.md
               - Pipelines: reference/scraper/anvisa/pipelines.md
               - Catalog Builder: reference/scraper/anvisa/catalog.md
-              - Config: reference/scraper/anvisa/config.md
+              - Configuration: reference/scraper/anvisa/config.md
           - Wikipedia: []
-          - Infrastructure (Selenium): reference/scraper/selenium.md
+          - Drugscom: []
+      - Database: []
       - Modeling: []

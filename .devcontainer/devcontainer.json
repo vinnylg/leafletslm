@@ -52,6 +52,11 @@
           "editor.formatOnSave": false
         },
 
+        "markdownlint.config": {
+          "MD033": false,
+          "MD041": false
+        },
+
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
         "files.autoSave": "onFocusChange",
