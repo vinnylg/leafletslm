@@ -32,6 +32,8 @@ services:
     command: make dagster up
     environment: 
       - DAGSTER_HOME=/workspace
+    tty: true
+    stdin_open: true
     restart: unless-stopped
 
   mkdocs:
@@ -44,7 +46,9 @@ services:
       - ./:/workspace
     ports:
       - "8000:8000"
-    command: make docs up
+    command: make docs watch
+    tty: true
+    stdin_open: true
     restart: unless-stopped
 
   mkdocs-funnel:

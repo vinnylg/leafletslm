@@ -225,12 +225,17 @@ docs:
 		echo ""; \
 		echo "Commands:"; \
 		echo "  up       Serve documentation locally (0.0.0.0:8000)"; \
+		echo "  watch    Watch files with entr and serve documentation locally (0.0.0.0:8000)"; \
 		echo "  down     Stop documentation server"; \
 		echo "  restart  Restart the documentation server"; \
 		echo "  build    Build static documentation to site/"; \
 		echo "  deploy   Deploy documentation to GitHub Pages"; \
 		echo ""; \
 	elif [ "$(DOCS_ARGS)" = "up" ]; then \
+		echo ">>> Serving documentation..."; \
+		echo "mkdocs serve -a 0.0.0.0:8000"; \
+		mkdocs serve -a 0.0.0.0:8000; \
+	elif [ "$(DOCS_ARGS)" = "watch" ]; then \
 		echo ">>> Serving documentation..."; \
 		echo "find docs/ drugslm/ -type f \( -name "*.py" -o -name "*.md" \) | entr -r mkdocs serve -a 0.0.0.0:8000"; \
 		find docs/ drugslm/ -type f \( -name "*.py" -o -name "*.md" \) | entr -r mkdocs serve -a 0.0.0.0:8000; \
