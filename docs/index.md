@@ -2,7 +2,7 @@
 
 > **Master's Thesis Project** | Federal University of Paraná (UFPR) | Computer Science Department
 
-DrugsLM is a specialized Small Language Model (SLM) trained on drug package inserts and medical databases, designed to understand and generate accurate pharmaceutical information in Portuguese and English.
+DrugsLM is a specialized Small Language Model (SLM) trained on drug package inserts and other pharmacological databases, designed to understand and generate accurate and simple pharmaceutical information.
 
 ---
 
@@ -10,65 +10,113 @@ DrugsLM is a specialized Small Language Model (SLM) trained on drug package inse
 
 This project is part of a Master's thesis in Computer Science at the **Federal University of Paraná (UFPR)**, Curitiba, Brazil. The research focuses on:
 
-- Domain-specific language model development
-- Efficient training strategies for Small Language Models
-- Medical information extraction and structuring
-- Multilingual pharmaceutical knowledge representation
+- Democratizing access to complex pharmacological information
+- Structuring unstructured data from official pharmaceutical documentation
+- Domain-adaptation of Language Models for pharmacological information
+- Resource-efficient fine-tuning strategies for Small Language Models (SLMs)
+- Validation and reliability of Generative AI in healthcare contexts
 
 **Researcher**: Vinícius de Lima Gonçalves  
+**Advisor**: Professor Eduardo Todt, PhD  
 **Institution**: Department of Computer Science, UFPR
+
+
+## 🎯 Project Vision
+
+High-quality outcomes likely depend on rigorously structured data rather than massive scale, favoring Small Language Models (SLMs). Leveraging Knowledge Graphs aims to provide precise context and granularity. Comparing architectures intends to demonstrate that data structure is key to resource-efficient, reliable pharmacological AI.
 
 ---
 
-## 📋 Project Roadmap
+## 📋 Experimental Assets Lineage ( Data Roadmap )
 
-The diagram below illustrates the complete data acquisition and processing roadmap for this project, organized as a data-centric asset graph showing what has been completed, what's in progress, and what's planned.
+The diagram below illustrates the complete data acquisition and processing roadmap for this project, organized as a data-centric asset chart, showing progress across all assets. Each node also has a link to the main module responsible for acquiring the respective data, whether completed or in progress.
+
+#### Legend
+```mermaid
+flowchart LR
+
+    classDef done fill:#a8d5ba,stroke:#6da382,stroke-width:2px,color:#212529;
+    classDef active fill:#ffe6a7,stroke:#c9a655,stroke-width:3px,color:#212529;
+    classDef must fill:#f4b6c2,stroke:#c07c88,stroke-width:2px,color:#212529;
+    classDef could fill:#add8e6,stroke:#7daab6,stroke-width:1px,stroke-dasharray: 5 5,color:#212529;
+    classDef drop fill:#e3e3e3,stroke:#b0b0b0,stroke-width:1px,stroke-dasharray: 2 2,color:#6c757d;
+
+    L1(Complete):::done --- L2(In Progress):::active --- L3(Must Be):::must --- L4(Could Be):::could --- L5(Dropped):::drop
+```
+
+---
 
 ```mermaid
 flowchart TD
-    classDef done fill:#198754,stroke:#146c43,stroke-width:2px,color:white;
-    classDef active fill:#ffc107,stroke:#ba8b00,stroke-width:4px,color:black;
-    classDef mvp fill:#dc3545,stroke:#a71d2a,stroke-width:2px,color:white;
-    classDef future fill:#e9ecef,stroke:#ced4da,stroke-width:1px,color:#1e40af;
-    classDef dead fill:#e9ecef,stroke:#ced4da,stroke-width:1px,color:#adb5bd;
+
+    %% Definição de Estilos
+    classDef done fill:#a8d5ba,stroke:#6da382,stroke-width:2px,color:#212529;
+    classDef active fill:#ffe6a7,stroke:#c9a655,stroke-width:3px,color:#212529;
+    classDef must fill:#f4b6c2,stroke:#c07c88,stroke-width:2px,color:#212529;
+    classDef could fill:#add8e6,stroke:#7daab6,stroke-width:1px,stroke-dasharray: 5 5,color:#212529;
+    classDef drop fill:#e9ecef,stroke:#b0b0b0,stroke-width:1px,stroke-dasharray: 2 2,color:#6c757d;
+
+    %% Subgrafo Unificado: Ingestão e Processamento
+    subgraph Pipeline [Data Ingestion & Processing Pipeline]
         
-    Begin([Start Data Acquisition]):::done
-    
-    Catalog[ANVISA Catalog Scraper]:::done
-    AnvisaPage[ANVISA Drug Pages]:::active
-    PDF[Package Insert PDFs]:::mvp 
-    
-    WikiAPI[Wikipedia API]:::future
-    Wiki[Wikipedia Drug Categories]:::future
-    WikiPage[Wikipedia Drug Articles]:::future
-    
-    Drugs[Drugs.com site Exploration]:::future
-    DrugsCat[Drugs.com Catalog Scraper]:::future
-    DrugsPage[Drugs.com Drug Pages]:::future
-    
-    SST[Simple Structured Text]:::mvp
-    NER[Named Entity Recognition]:::future
-    RST[Related Structured Text]:::future
-    GST[Graph Structured Text]:::future
-    
-    VDB[(Vector Database)]:::mvp
-    GDB[(Graph Database)]:::future
+        %% Track ANVISA
+        AnvisaCat[ANVISA Catalog]:::done
+        AnvisaPage[Drug HTML Pages]:::active
+        AnvisaPDF[Package Insert PDFs]:::must
+        AExt[PDF Text Extraction]:::must
+        AProc[ANVISA Processor]:::must
 
-    Begin ==> Catalog ==> AnvisaPage ==> PDF ==> SST
-    Begin -.-> WikiAPI -.-> Wiki -.-> WikiPage -.-> SST
-    Begin -.-> Drugs -.-> DrugsCat -.-> DrugsPage -.-> SST
-            
-    SST =====> VDB
-    SST -.-> NER -.-> RST -.-> GST -.-> GDB
-    
-    class Drugs dead
-    class DrugsCat dead
-    class DrugsPage dead
+        %% Track Wikipedia
+        WikiA[Wiki Categories]:::could
+        Wiki[Wiki Categories]:::could
+        WikiPage[Wiki Articles]:::could
+        WExt[HTML Extraction]:::could
+        WProc[Wiki Processor]:::could
 
-    click Catalog "reference/scraper/anvisa/catalog/" "See Catalog Activity Diagram"
+        %% Track Drugs.com
+        DrugsA[Drugs.com Catalog]:::drop
+        Drugs[Drugs.com Catalog]:::drop
+        DrugsPage[Drugs.com Pages]:::drop
+        DExt[HTML Extraction]:::drop
+        DProc[Drugs Processor]:::drop
+
+        %% Convergence Point
+        SST[SST: Simple Structured Text]:::must
+
+        %% Fluxos
+        AnvisaCat ==> AnvisaPage ==> AnvisaPDF ==> AExt ==> AProc ==> SST
+        WikiA -.-> Wiki -.->WikiPage --> WExt --> WProc --> SST
+        DrugsA -.-> Drugs -.-> DrugsPage -.-> DExt -.-> DProc -.-> SST
+    end
+
+    %% Subgrafo: Enriquecimento Semântico (NLP)
+    subgraph Enrichment [Knowledge Extraction & Structuring]
+        
+        %% Caminho Vetorial
+        Embed[Embedding Model]:::must
+        
+        %% Caminho do Grafo
+        NER[NER: Entity Extraction]:::must
+        EntRes[Entity Resolution]:::must
+        RelExt[Relation Extraction]:::could
+        KGConst[Knowledge Graph Construction]:::could
+
+        %% Conexões Lógicas
+        SST ==> Embed
+        SST ==> NER ==> EntRes ==> RelExt ==> KGConst
+    end
+    
+    %% Subgrafo: Armazenamento
+    subgraph Storage [Persistent Storage]
+        VDB[(Vector Database)]:::must
+        GDB[(Graph Database)]:::could
+
+        Embed ==> VDB
+        KGConst --> GDB
+    end
+
+    click AnvisaCat "reference/scraper/anvisa/catalog/" "See Anvisa Catalog Module"
 ```
-
-**Legend**: 🟢 Complete | 🟡 In Progress | 🔴 MVP Phase | ⚪ Planned | ⚫ Dropped
 
 ---
 
@@ -100,22 +148,10 @@ flowchart TD
   </div>
 </div>
 
+
 ---
 
 **Next Steps**: [Set up your development environment →](getting-started.md)
-
-<!--
-## 🎯 Project Vision
-
-Traditional large language models often struggle with domain-specific medical information, particularly in non-English languages. DrugsLM addresses this by:
-
-- **Specialized Training**: Focused exclusively on pharmaceutical data from regulatory agencies
-- **Multilingual Support**: Primary focus on Portuguese (ANVISA) with English expansion (Wikipedia, Drugs.com)
-- **Accuracy First**: Built from verified, authoritative sources rather than general web data
-- **Efficient Design**: Small Language Model approach for faster inference and lower computational costs
-
-TODO: Refine this section with a more academic tone or move to a different location
--->
 
 ## 🤝 Contributing
 
