@@ -3,7 +3,7 @@
   "dockerComposeFile": ["../compose.yaml"],
   "service": "drugslm",
   "overrideCommand": true,
-  "runServices": ["drugslm", "mkdocs", "dagster"],
+  "runServices": ["mkdocs", "dagster"],
   "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {

@@ -240,7 +240,7 @@ docs:
 		$(MAKE) docs down; \
 		$(MAKE) docs up; \
 	elif [ "$(DOCS_ARGS)" = "build" ]; then \
-		mkdocs build; \
+		mkdocs build -f mkdocs.yaml; \
 	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
 		mkdocs gh-deploy; \
 	else \
