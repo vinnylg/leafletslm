@@ -163,6 +163,7 @@ purge: clean
 	@echo ""
 	@echo ">>> Delete all not trackerable files, include .venv (less .env)"
 	find . -type d -name ".venv" -exec rm -rf {} +
+	rm -rf site
 	@echo ">>> Project purge completed"
 
 #################################################################################

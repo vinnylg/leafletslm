@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-LOCK=".entrypoint.lock"
+LOCK=".tmp/.entrypoint.lock"
+
+mkdir -p "$(dirname "$LOCK")"
 
 echo ">>> [entrypoint] Attempting to acquire lock..."
 
