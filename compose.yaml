@@ -69,3 +69,4 @@ services:
       - NET_RAW
     restart: unless-stopped
 
+# TODO: Recolocar serviços aqui como o Selenium, mas usando o profiles: [scraper]

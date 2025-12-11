@@ -22,6 +22,38 @@ This project is part of a Master's thesis in Computer Science at the **Federal U
 
 High-quality outcomes likely depend on rigorously structured data rather than massive scale, favoring Small Language Models (SLMs). Leveraging Knowledge Graphs aims to provide precise context and granularity. Comparing architectures intends to demonstrate that data structure is key to resource-efficient, reliable pharmacological AI.
 
+## 🧬 Project Lifecycle & Roadmap
+
+The project follows a rigorous 6-phase data-centric methodology, ensuring reproducibility and reliability from data acquisition to model deployment.
+
+```mermaid
+flowchart LR
+
+    classDef phase fill:#f0f4f8,stroke:#2c3e50,stroke-width:2px,color:#2c3e50;
+
+    P1(Phase 1<br/>Data Acquisition):::phase
+    P2(Phase 2<br/>Modeling):::phase
+    P3(Phase 3<br/>Training):::phase
+    P4(Phase 4<br/>Evaluation):::phase
+    P5(Phase 5<br/>Deployment):::phase
+    P6(Phase 6<br/>Monitoring):::phase
+
+    P1 <==> P2 <==> P3 <==> P4 <==> P5 <==> P6
+
+    click P1 "architecture/roadmap/#phase-1-data-acquisition-and-preparation-etl" "Go to Phase 1: Acquisition"
+    click P2 "architecture/roadmap/#phase-2-modeling-and-system-design" "Go to Phase 2: Modeling"
+    click P3 "architecture/roadmap/#phase-3-training-and-optimization" "Go to Phase 3: Training"
+    click P4 "architecture/roadmap/#phase-4-evaluation-and-validation" "Go to Phase 4: Evaluation"
+    click P5 "architecture/roadmap/#phase-5-deployment" "Go to Phase 5: Deployment"
+    click P6 "architecture/roadmap/#phase-6-monitoring-and-continuous-improvement" "Go to Phase 6: Monitoring"
+
+
+```
+
+<p style="text-align: center; color: #5f6368; margin-bottom: 2rem; font-style: italic;">
+  Explore the detailed lineage regarding extraction, transformation, training strategies, and validation metrics for each phase by clicking on the nodes below.
+</p>
+
 ## 🚀 Quick Start
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
