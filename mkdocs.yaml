@@ -31,8 +31,11 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Infrastructure: infrastructure.md
-  - Architecture: architecture.md
+  - Architecture & Design:
+    - architecture/index.md
+    - Visual Standards: architecture/standards.md
+    - Data Roadmap: architecture/roadmap.md
+    - Infrastructure: architecture/infrastructure.md
   - API Reference:
       - reference/index.md
       - Scraper:

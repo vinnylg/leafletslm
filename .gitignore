@@ -1,18 +1,5 @@
 # Data
-/data/*
-!data/.gitkeep
-!data/external/
-!data/interim/
-!data/processed/
-!data/raw/
-data/external/*
-data/interim/*
-data/processed/*
-data/raw/*
-!data/external/.gitkeep
-!data/interim/.gitkeep
-!data/processed/.gitkeep
-!data/raw/.gitkeep
+/data/
 
 *.tmp*
 .nux

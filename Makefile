@@ -246,9 +246,9 @@ docs:
 		$(MAKE) docs down; \
 		$(MAKE) docs up; \
 	elif [ "$(DOCS_ARGS)" = "build" ]; then \
-		mkdocs build -f mkdocs.yaml; \
+		mkdocs build -f mkdocs.yaml -d docs/site; \
 	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
-		mkdocs gh-deploy; \
+		mkdocs gh-deploy -f mkdocs.yam; \
 	else \
 		echo "Unknown command: '$(DOCS_ARGS)'"; \
 		exit 1; \
