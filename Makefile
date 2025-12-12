@@ -144,27 +144,66 @@ test:
 .PHONY: clean
 clean:
 	@echo ">>> Delete all compiled Python files, build artifacts and caches"
-	find . -type f -name "*.py[co]" -delete
-	find . -type d -name "__pycache__" -delete
-	find . -type d -name ".ruff_cache" -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
-	find . -type d -name ".logs_queue" -exec rm -rf {} +
-	find . -type d -name ".nux" -exec rm -rf {} +
-	find . -type d -name ".tmp*" -exec rm -rf {} +
-
+	find . -type f -name "*.py[co]" -print -delete
+	find . -type d -name "__pycache__" -print -delete
+	find . -type d -name ".ruff_cache" -print -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -print -exec rm -rf {} +
+	find . -type d -name "*.egg-info" -print -exec rm -rf {} +
+	find . -type d -name ".logs_queue" -print -exec rm -rf {} +
+	find . -type d -name ".nux" -print -exec rm -rf {} +
+	find . -type d -name ".tmp*" -print -exec rm -rf {} +
+	find data -depth -type d -empty -print -delete
 	@echo ">>> Project cleanup completed"
 
 
 ## Delete all not trackerable files, include .venv, less .env 
 ## In future, ask for confirmation for each remove
+# .PHONY: purge
+# purge: clean
+# 	@echo ""
+# 	@echo ">>> Delete all not trackable files, including .venv (except .env)"
+# 	find . -type d -name ".venv" -print -exec rm -rf {} +
+# 	find . -type d -name ".docsweb" -print -exec rm -rf {} +
+# 	find .tailscale -type d -name "mkdocs" -print -exec sudo rm -rf {} +
+# 	@echo ">>> Project purge completed"
+
 .PHONY: purge
 purge: clean
 	@echo ""
-	@echo ">>> Delete all not trackerable files, include .venv (less .env)"
-	find . -type d -name ".venv" -exec rm -rf {} +
-	rm -rf site
+	@echo ">>> Delete all not trackable files, including .venv (except .env)"
+
+	@echo ">>> Checking .venv directories"
+	@find . -type d -name ".venv" | while read d; do \
+		printf "Remove %s ? [Y/n] " "$$d"; \
+		read ans; \
+		case $$ans in \
+			[Yy]|"" ) echo "Removing $$d"; rm -rf "$$d";; \
+			* ) echo "Skipped $$d";; \
+		esac; \
+	done
+
+	@echo ">>> Checking .docsweb directories"
+	@find . -type d -name ".docsweb" | while read d; do \
+		printf "Remove %s ? [Y/n] " "$$d"; \
+		read ans; \
+		case $$ans in \
+			[Yy]|"" ) echo "Removing $$d"; rm -rf "$$d";; \
+			* ) echo "Skipped $$d";; \
+		esac; \
+	done
+
+	@echo ">>> Checking .tailscale/mkdocs directories"
+	@find .tailscale -type d -name "mkdocs" 2>/dev/null | while read d; do \
+		printf "Remove %s ? [Y/n] " "$$d"; \
+		read ans; \
+		case $$ans in \
+			[Yy]|"" ) echo "Removing $$d"; sudo rm -rf "$$d";; \
+			* ) echo "Skipped $$d";; \
+		esac; \
+	done
+
 	@echo ">>> Project purge completed"
+
 
 #################################################################################
 # DAGSTER CONTROLLER                                                            #
@@ -246,7 +285,7 @@ docs:
 		$(MAKE) docs down; \
 		$(MAKE) docs up; \
 	elif [ "$(DOCS_ARGS)" = "build" ]; then \
-		mkdocs build -f mkdocs.yaml -d docs/site; \
+		mkdocs build -f mkdocs.yaml -d .mksite; \
 	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
 		mkdocs gh-deploy -f mkdocs.yam; \
 	else \
