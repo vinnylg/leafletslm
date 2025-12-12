@@ -87,9 +87,9 @@ Given the data-centric nature of this research, distinguishing between data type
 ```mermaid
 flowchart LR
 
-    Data[Generic / Brass]
-    Raw>Raw / Bronze]
-    Interim(Intermediate / Silver)
+    Data([Auxiliar / Brass])
+    Raw[Raw / Bronze]
+    Interim@{ shape: lin-rect, label: "Intermediate / Silver" }
     Processed[[Processed / Gold]]
     DB[(Persistent Store)]
 
@@ -114,12 +114,13 @@ flowchart LR
 ```
 
 ---
+    Interim@{ shape: lin-rect, label: "Intermediate / Silver" }
 
 | Shape | Mermaid Syntax | Project Meaning |
 | :--- | :--- | :--- |
-| **Rectangle** | `id[Text]` | **Brass:** Generic, unclassified, or miscellaneous data. |
-| **Asymmetric** | `id>Text]` | **Bronze:** Immutable raw source files (PDFs, HTML dumps). |
-| **Round Edge** | `id(Text)` | **Silver:** Intermediate, transient, or in-memory data (e.g., extracted JSON). |
+| **Stadium** | `id([Text])` | **Brass:** Generic, unclassified, or miscellaneous data. |
+| **Rectangle** | `id[Text]` | **Bronze:** Immutable raw source files (PDFs, HTML dumps). |
+| **Lined Process** | `@{ shape: lin-rect }` | **Silver:** Intermediate, transient, or in-memory data (e.g., extracted JSON). |
 | **Subroutine** | `id[[Text]]` | **Gold:** Processed, structured, and consolidated corpus. |
 | **Cylinder** | `id[(Text)]` | **Persistent Store:** Indexed Databases (Vector DB, Graph DB). |
 | **Parallelogram** | `id[/Text/]` | **I/O:** Dynamic inputs, user prompts, test questions. |

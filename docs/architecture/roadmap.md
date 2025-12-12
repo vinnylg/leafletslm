@@ -8,40 +8,74 @@ This phase establishes the empirical foundation of the entire system. Data must 
 
 
 ```mermaid
+
 flowchart TD
-    classDef done fill:#a5eea0,stroke:#5dc460,stroke-width:2px,color:#212529;
-    classDef active fill:#ffe6a7,stroke:#c9a655,stroke-width:3px,color:#212529;
-    classDef todo fill:#e3f2fd,stroke:#90caf9,stroke-width:1px,stroke-dasharray: 5 5,color:#212529;
-    classDef must fill:#f8bbd0,stroke:#c2185b,stroke-width:2px,color:#212529;
 
-    AnvisaCat[ANVISA Catalog]:::done
-    AnvisaPage[Drug HTML Pages]:::active
-    AnvisaPDF[Package Insert PDFs]:::must
-    AExt[PDF Text Extraction]:::must
-    AProc[ANVISA Processor]:::must
-
-    %% Track Wikipedia
-    WikiA[Wiki Categories]:::could
-    Wiki[Wiki Categories]:::could
-    WikiPage[Wiki Articles]:::could
-    WExt[HTML Extraction]:::could
-    WProc[Wiki Processor]:::could
-
-    %% Track Drugs.com
-    DrugsA[Drugs.com Catalog]:::drop
-    Drugs[Drugs.com Catalog]:::drop
-    DrugsPage[Drugs.com Pages]:::drop
-    DExt[HTML Extraction]:::drop
-    DProc[Drugs Processor]:::drop
-
-    %% Convergence Point
-    SSC[Simple Structured Corpus]:::must
-
-    %% Fluxos
-    AnvisaCat ==> AnvisaPage ==> AnvisaPDF ==> AExt ==> AProc ==> SSC
-    WikiA -.-> Wiki -.->WikiPage --> WExt --> WProc --> SSC
-    DrugsA -.-> Drugs -.-> DrugsPage -.-> DExt -.-> DProc -.-> SSC
-
+    %% classDef done fill:#a5eea0,stroke:#5dc460,stroke-width:2px,color:#212529;
+    %% classDef active fill:#ffe6a7,stroke:#c9a655,stroke-width:3px,color:#212529;
+    %% classDef todo fill:#90caf9,stroke:#1565c0,stroke-width:2px,stroke-dasharray: 5 5,color:#000;
+    %% classDef must fill:#f8bbd0,stroke:#c2185b,stroke-width:2px,color:#212529;
+    %% classDef drop fill:#eeeeee,stroke:#bdbdbd,stroke-width:2px,stroke-dasharray: 5 5,color:#9e9e9e;
+    
+    ACat([ANVISA Catalog]):::done
+    APage([ANVISA Drug Pages]):::active
+    APDF[ANVISA Package Insert PDFs]:::must
+    
+    AExt([PDF Raw Extraction])
+    ANorm([Text Normalization])
+    ASegm([Semantic Segmentation])
+    ACorr([Structural Cleanup & Repair])
+    AConv([Intermediate Conversion])
+    AVal{Data Validation}
+    AFinal@{ shape: lin-rect, label: "Anvisa Final Data" }
+    
+    ACat ==> APage ==> APDF ==> AExt ==> ANorm ==> ASegm ==> ACorr ==> AConv ==> AVal ==> AFinal ==> Join
+    
+     AVal -.->| Improvement Loop | APDF
+    
+    
+    WCat([Wikipedia Catalog])
+    WPage([Wikipedia Drug Page])
+    WHTML[Wikipedia Drug HTML]
+    
+    WExt([HTML Raw Extraction])
+    WNorm([Text Normalization])
+    WSegm([Semantic Segmentation])
+    WCorr([Structural Cleanup & Repair])
+    WConv([Intermediate Conversion])
+    WVal{Data Validation}
+    WFinal@{ shape: lin-rect, label: "Wikipedia Final Data" }
+    
+    
+    WCat -.-> WPage -.-> WHTML -.-> WExt -.-> WNorm -.-> WSegm -.-> WCorr -.-> WConv -.-> WVal -.-> WFinal -.-> Join
+    
+     WVal -.->| Improvement Loop | WHTML
+    
+    DCat([Drugs.com Catalog])
+    DPage([Drugs.com Drug Page])
+    DHTML[Drugs.com Drug HTML]
+    
+    DExt([HTML Raw Extraction])
+    DNorm([Text Normalization])
+    DSegm([Semantic Segmentation])
+    DCorr([Structural Cleanup & Repair])
+    DConv([Intermediate Conversion])
+    DVal{Data Validation}
+    DFinal@{ shape: lin-rect, label: "Drugs.com Final Data" }
+    
+    
+    DCat -.-> DPage -.-> DHTML -.-> DExt -.-> DNorm -.-> DSegm -.-> DCorr -.-> DConv -.-> DVal -.-> DFinal -.-> Join
+     
+    DVal -.->| Improvement Loop | DHTML
+    
+  
+    Join((Cross-Source</br>Merge))
+    FVal{Corpus Integrity Validation}
+    SSC[[Simple Structured Corpus]]:::must
+    
+    Join ==> FVal ==> SSC
+    FVal -.->| Improvement Loop | Join
+    
 ```
 
 ## Phase 2 — Modeling and System Design
@@ -63,3 +97,27 @@ Deployment operationalizes the model, integrating it into an environment where i
 ## Phase 6 — Monitoring and Continuous Improvement
 
 After deployment, the system must be continuously monitored for **performance degradation**, **data drift**, **emergent failure modes**, and **safety violations**. Feedback loops—both automated and human-supervised—inspire iterative updates to the **data**, the **model**, or the **retrieval and alignment components**. This ongoing process is essential for maintaining reliability, especially in domains with evolving knowledge or regulatory requirements.
+
+
+# tmp
+
+
+    %% Track Wikipedia
+    WikiA[Wiki Categories]:::could
+    Wiki[Wiki Categories]:::could
+    WikiPage[Wiki Articles]:::could
+    WExt[HTML Extraction]:::could
+    WProc[Wiki Processor]:::could
+
+    %% Track Drugs.com
+    DrugsA[Drugs.com Catalog]:::drop
+    Drugs[Drugs.com Catalog]:::drop
+    DrugsPage[Drugs.com Pages]:::drop
+    DExt[HTML Extraction]:::drop
+    DProc[Drugs Processor]:::drop
+
+    %% Convergence Point
+    SSC[Simple Structured Corpus]:::must
+
+    WikiA -.-> Wiki -.->WikiPage --> WExt --> WProc --> SSC
+    DrugsA -.-> Drugs -.-> DrugsPage -.-> DExt -.-> DProc -.-> SSC
