@@ -2,7 +2,6 @@
 
 The definitions below outline the semantic rules for interaction flows, execution states, and data artifact taxonomy used throughout this documentation.
 
-
 ## Data Artifact Taxonomy
 
 Given the attempt at a data-centric nature of this research, distinguishing between data types and their maturity levels is crucial. We employ a specific shape taxonomy to categorize artifacts, following a modified "Medallion Architecture" (Bronze, Silver, Gold) adapted for LLM pipelines. This taxonomy visually separates raw inputs, intermediate in-memory structures, consolidated corpora, persistent storage, and model weights (both internal and external), ensuring that the state of any data asset is instantly recognizable.
@@ -41,8 +40,8 @@ flowchart LR
 
 ```
 
+### Table of Data Artifact Taxonomy
 
-### Table of Shapes Used
 > Note: To use custom shapes the New Syntax is `Node@{ shape: shape-name, label: "Text"}`
 
 ---
@@ -64,7 +63,6 @@ flowchart LR
 | **Window Pane**</br>Internal Storage | `win-pane` | **TTV Set:** Train, Validation, and Test splits. |
 | **Asymmetric Shape**</br>Odd | `id>Text]`</br>`odd` | **Link/Ref:** Reference to another UML Diagram or Documentation Section. |
 | **Curved Trapezoid**</br>Display | `curv-trap` | **External Artefact:** The document generated based on the general roadmap/flowchart. |
-
 
 ## Process Artifact Taxonomy
 
@@ -88,8 +86,7 @@ flowchart LR
 
 ```
 
-
-### Table of Shapes Used
+### Table of Process Artifact Taxonomy
 
 > Note: To use custom shapes the New Syntax is `Node@{ shape: shape-name, label: "Text"}`
 
@@ -105,7 +102,6 @@ flowchart LR
 | **Trapezoid Top**</br>Manual Operation | `id[\Text/]`</br>`manual` | **Human Task:** Manual annotation, expert validation, creation of protocols, or ground truth sampling. |
 | **Trapezoid Bottom**</br>Priority Action | `id[/Text\]`</br>`priority` | **AI Task:** Automated intelligent processing (e.g., LLM-based labeling, synthetic data generation). |
 | **Braces**</br>Comment | `braces` | **Annotation:** Contextual notes, explanations, or "nice-to-know" info attached to nodes. |
-
 
 ## Execution Status Lifecycle
 
@@ -142,8 +138,6 @@ flowchart LR
 | `:::must` | Pink (Solid) | **Must:** Mandatory milestones. High priority. |
 | `:::todo` | Blue (Dashed) | **Todo:** Planned future tasks (Backlog). |
 | `:::dropped`| **Gray (Faded)**| **Aborted:** Features or paths that were discarded or de-prioritized. |
-
-
 
 ## Interaction Flows & Dependencies
 
@@ -190,8 +184,6 @@ flowchart
 | `A --- B` | **Solid Line** | **Context/Read-Only:** Static dependency. Data is accessed/read but not consumed/transformed (e.g., Configs). |
 | `A <--> B` | **Double Arrow** | **Feedback Loop:** Iterative process, optimization cycles, or bidirectional data exchange. |
 
-
 ---
 
 > **What is next?:** See how this standards are used acessing [Data Roadmap](roadmap/index.md).
-
