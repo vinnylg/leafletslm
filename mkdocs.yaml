@@ -34,7 +34,9 @@ nav:
   - Architecture & Design:
     - architecture/index.md
     - Visual Standards: architecture/standards.md
-    - Data Roadmap: architecture/roadmap.md
+    - Data Roadmap:
+      - architecture/roadmap/index.md
+      - Phase 1 Detailment: architecture/roadmap/phase1.md
     - Infrastructure: architecture/infrastructure.md
   - API Reference:
       - reference/index.md

@@ -1,4 +1,4 @@
-# Experimental Assets Lineage ( Data Roadmap )
+# Experimental Assets Lineage
 
 The diagram below illustrates the complete data acquisition and processing roadmap for this project, organized as a data-centric asset chart, showing progress across all assets. Each node also has a link to the main module responsible for acquiring the respective data, whether completed or in progress.
 
@@ -6,75 +6,66 @@ The diagram below illustrates the complete data acquisition and processing roadm
 
 This phase establishes the empirical foundation of the entire system. Data must be **collected**, **curated**, **cleaned**, **filtered**, **normalized**, and **structured** to support the intended behavior of the model. For large language models, this includes **deduplication**, **domain balancing**, **safety filtering**, and the creation of well-defined **training**, **validation**, and **test splits**. The quality and representativeness of the data directly determine the reliability and limits of the downstream model.
 
+---
 
 ```mermaid
-
 flowchart TD
-
-    %% classDef done fill:#a5eea0,stroke:#5dc460,stroke-width:2px,color:#212529;
-    %% classDef active fill:#ffe6a7,stroke:#c9a655,stroke-width:3px,color:#212529;
-    %% classDef todo fill:#90caf9,stroke:#1565c0,stroke-width:2px,stroke-dasharray: 5 5,color:#000;
-    %% classDef must fill:#f8bbd0,stroke:#c2185b,stroke-width:2px,color:#212529;
-    %% classDef drop fill:#eeeeee,stroke:#bdbdbd,stroke-width:2px,stroke-dasharray: 5 5,color:#9e9e9e;
     
-    ACat([ANVISA Catalog]):::done
-    APage([ANVISA Drug Pages]):::active
-    APDF[ANVISA Package Insert PDFs]:::must
+    ACat([ANVISA Catalog Diagram])
+    APage([ANVISA Drug Pages Diagram])
+    APDF[ANVISA Package Insert PDFs]
     
-    AExt([PDF Raw Extraction])
-    ANorm([Text Normalization])
-    ASegm([Semantic Segmentation])
-    ACorr([Structural Cleanup & Repair])
-    AConv([Intermediate Conversion])
-    AVal{Data Validation}
+    AExt([PDF Extraction Diagram])
+    ASem([Semantic Text Improvment])
+    AVal{Check}
     AFinal@{ shape: lin-rect, label: "Anvisa Final Data" }
     
-    ACat ==> APage ==> APDF ==> AExt ==> ANorm ==> ASegm ==> ACorr ==> AConv ==> AVal ==> AFinal ==> Join
+    ACat ==> APage ==> APDF ==> AExt ==> ASem ==> AVal ==> AFinal ==> Join
     
-     AVal -.->| Improvement Loop | APDF
+    AVal -.->| Improvement Loop | APDF
     
     
     WCat([Wikipedia Catalog])
     WPage([Wikipedia Drug Page])
     WHTML[Wikipedia Drug HTML]
     
-    WExt([HTML Raw Extraction])
-    WNorm([Text Normalization])
-    WSegm([Semantic Segmentation])
-    WCorr([Structural Cleanup & Repair])
-    WConv([Intermediate Conversion])
-    WVal{Data Validation}
+    WExt([HTML Extraction Diagram])
+    WSem([Semantic Text Improvment])
+    WVal{Check}
     WFinal@{ shape: lin-rect, label: "Wikipedia Final Data" }
     
+    WCat -.-> WPage -.-> WHTML -.-> WExt -.-> WSem -.-> WVal -.-> WFinal -.-> Join
     
-    WCat -.-> WPage -.-> WHTML -.-> WExt -.-> WNorm -.-> WSegm -.-> WCorr -.-> WConv -.-> WVal -.-> WFinal -.-> Join
+    WVal -.->| Improvement Loop | WHTML
     
-     WVal -.->| Improvement Loop | WHTML
-    
+
     DCat([Drugs.com Catalog])
     DPage([Drugs.com Drug Page])
     DHTML[Drugs.com Drug HTML]
     
-    DExt([HTML Raw Extraction])
-    DNorm([Text Normalization])
-    DSegm([Semantic Segmentation])
-    DCorr([Structural Cleanup & Repair])
-    DConv([Intermediate Conversion])
-    DVal{Data Validation}
+    DExt([HTML Extraction Diagram])
+    DSem([Semantic Text Improvment])
+    DVal{Check}
     DFinal@{ shape: lin-rect, label: "Drugs.com Final Data" }
     
     
-    DCat -.-> DPage -.-> DHTML -.-> DExt -.-> DNorm -.-> DSegm -.-> DCorr -.-> DConv -.-> DVal -.-> DFinal -.-> Join
+    DCat -.-> DPage -.-> DHTML -.-> DExt -.-> DSem -.-> DVal -.-> DFinal -.-> Join
      
     DVal -.->| Improvement Loop | DHTML
     
   
     Join((Cross-Source</br>Merge))
     FVal{Corpus Integrity Validation}
-    SSC[[Simple Structured Corpus]]:::must
+    SSC[[Simple Structured Corpus]]
     
     Join ==> FVal ==> SSC
     FVal -.->| Improvement Loop | Join
+
+
+    click AExt "phase1/#pdf-extraction-diagram" "Go PDF Extraction Diagram"
+    click WExt "phase1/#html-extraction-diagram" "Go HTML Extraction Diagram"
+    click DExt "phase1/#html-extraction-diagram" "Go HTML Phase 1 Extraction Diagram"
+
     
 ```
 
