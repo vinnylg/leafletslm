@@ -293,6 +293,22 @@ docs:
 		exit 1; \
 	fi
 
+
+
+#################################################################################
+# DOCKER CONTROLLER - Only Cleanup                                                              #
+#################################################################################
+.PHONY: docker-clean docker-purge
+
+PROJECT := $(notdir $(CURDIR))
+
+docker-clean:
+	docker compose -p $(PROJECT) down --rmi all --remove-orphans
+
+docker-purge:
+	docker compose -p $(PROJECT) down --rmi all --volumes --remove-orphans
+
+
 #################################################################################
 # START CONTROLLER                                                              #
 #################################################################################
