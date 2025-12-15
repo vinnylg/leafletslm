@@ -16,53 +16,53 @@ flowchart LR
     Processed[[Processed / Gold]]
 
     DB[(Database)]
-    DB@{ shape: disk, label: "Disk storage" }
+    DB@{ shape: disk, label: "Database Storage" }
 
-    IModel@{ shape: stored-data, label: "IA Model Storage" }
+    IModel@{ shape: stored-data, label: "Model Weigths" }
 
     API{{API / External Data}}
-    Params@{ shape: flag, label: "Hyperparams / Config" }
+    Params@{ shape: flag, label: "Hyperparams / Configs" }
     Reports@{ shape: docs, label: "Human-Readable Reports" }
 
     ManualEntry@{ shape: doc, label: "Manual / Expert Data" }
-    Metrics@{ shape: processes, label: "Raw Experiment Metrics" }
-    UserData@{ shape: manual-input, label: "User Logs & Feedback" }
+    Results@{ shape: processes, label: "Experiment Results" }
+    UserData@{ shape: manual-input, label: "User Data & Feedback" }
 
-    TTV@{ shape: win-pane, label: "Train-Test-Valitation Set" }
-    Thesis@{ shape: curv-trap, label: "Thesis/External Artefacts" }
-    UML@{ shape: odd, label: "UML Diagram" }
+    TTV@{ shape: win-pane, label: "Train-Test-Valitation" }
+    Thesis@{ shape: odd, label: "Thesis Section" }
+    UML@{ shape: delay, label: "Another UML Diagram" }
 
     Data ~~~ Raw ~~~ Interim
     Processed ~~~ DB ~~~ IModel
     API ~~~ Params ~~~ Reports
-    ManualEntry  ~~~  Metrics ~~~ UserData
+    ManualEntry  ~~~  Results ~~~ UserData
     TTV ~~~ UML ~~~ Thesis
 
 ```
 
 ### Table of Data Artifact Taxonomy
 
-> Note: To use custom shapes the New Syntax is `Node@{ shape: shape-name, label: "Text"}`
+| Shape Name & Usual Meaning | Mermaid Syntax | Project Meaning |
+| :--- | :---: | :--- |
+| **Rounded Rectangle**</br>Event | `id(Text)`</br>`rounded` | **Generic Data**</br>Auxiliar, generic, or unclassified data. |
+| **Rectangle**</br>Process | `id[Text]`</br>`rect` | **Raw / Bronze**</br>Immutable raw source files (PDFs, HTML dumps). |
+| **Lined Rectangle**</br>Lined/Shaded Process | `lin-rect` | **Intermediate / Silver**</br>Intermediate, transient, or in-memory data (e.g., extracted JSON). |
+| **Framed Rectangle**</br>Subprocess | `id[[Text]]`</br>`subproc` | **Processed / Gold**</br>Processed, structured, and consolidated corpus. |
+| **Cylinder**</br>Database | `id[(Text)]`</br>`disk` | **Database Storage**</br>Indexed Databases (Vector DB, Graph DB). |
+| **Bow Tie Rectangle**</br>Stored Data | `stored-data` | **Model Weigths:**</br>Base models/weights downloaded (e.g., Llama 3.1 Base). |
+| **Hexagon**</br>Prepare Conditional | `id{{Text}}`</br>`hex` | **API/External Data**</br>External services or data sources accessed via network (e.g., Oracle). |
+| **Flag**</br>Paper Tape | `flag` | **Hyperparams / Configs**</br>Configuration files, hyperparameters, single text assets. |
+| **Stacked Document**</br>Multi-Document | `docs` | **Human-Readable Reports**</br>Human-readable documents (PDF, Markdown, Latex) generated from experiments. |
+| **Document**</br>Document | `doc` | **Manual / Expert Data**</br>Hand-crafted data, expert QA pairs, or manually inserted datasets (Ground Truth). |
+| **Stacked Rectangle**</br>Multi-Process | `processes` | **Experiment Results**</br>Raw internal data, metrics, logs, and experiment states (source for reports). |
+| **Sloped Rectangle**</br>Manual Input | `manual-input` | **User Data & Feedback**</br>Logs, chat history, feedback, and personal info provided by users. |
+| **Window Pane**</br>Internal Storage | `win-pane` | **Train-Test-Valitation**</br>Train, Validation, and Test splits for each type of dataset (QA, Ground-True,etc). |
+| **Half-Rounded Rectangle**</br>Delay | `delay` | **Another UML Diagram**</br>Reference to another UML Diagram or Documentation Section. |
+| **Asymmetric Shape**</br>Odd | `id>Text]`</br>`odd` | **Thesis Section**</br>The Section of Thesis generated based on these experiments. |
 
 ---
 
-| Shape Name & Usual Meaning | Mermaid Syntax | Project Meaning |
-| :--- | :---: | :--- |
-| **Rounded Rectangle**</br>Event | `id(Text)`</br>`rounded` | **Generic Data:** Auxiliar, generic, or unclassified data. |
-| **Rectangle**</br>Process | `id[Text]`</br>`rect` | **Bronze:** Immutable raw source files (PDFs, HTML dumps). |
-| **Lined Rectangle**</br>Lined/Shaded Process | `lin-rect` | **Silver:** Intermediate, transient, or in-memory data (e.g., extracted JSON). |
-| **Framed Rectangle**</br>Subprocess | `id[[Text]]`</br>`subproc` | **Gold:** Processed, structured, and consolidated corpus. |
-| **Cylinder**</br>Database | `id[(Text)]`</br>`disk` | **Persistent Store:** Indexed Databases (Vector DB, Graph DB). |
-| **Bow Tie Rectangle**</br>Stored Data | `stored-data` | **IA Model Storage:** Base models/weights downloaded (e.g., Llama 3.1 Base). |
-| **Hexagon**</br>Prepare Conditional | `id{{Text}}`</br>`hex` | **API/External:** External services or data sources accessed via network (e.g., Oracle). |
-| **Flag**</br>Paper Tape | `flag` | **Params:** Configuration files, hyperparameters, single text assets. |
-| **Stacked Document**</br>Multi-Document | `docs` | **Reports:** Human-readable documents (PDF, Markdown, Latex) generated from experiments. |
-| **Document**</br>Document | `doc` | **Manual Entry:** Hand-crafted data, expert QA pairs, or manually inserted datasets (Ground Truth). |
-| **Stacked Rectangle**</br>Multi-Process | `processes` | **Metrics:** Raw internal data, metrics, logs, and experiment states (source for reports). |
-| **Sloped Rectangle**</br>Manual Input | `manual-input` | **User Data:** Logs, chat history, feedback, and personal info provided by users. |
-| **Window Pane**</br>Internal Storage | `win-pane` | **TTV Set:** Train, Validation, and Test splits. |
-| **Asymmetric Shape**</br>Odd | `id>Text]`</br>`odd` | **Link/Ref:** Reference to another UML Diagram or Documentation Section. |
-| **Curved Trapezoid**</br>Display | `curv-trap` | **External Artefact:** The document generated based on the general roadmap/flowchart. |
+> Note: To use custom shapes the New Syntax is `Node@{ shape: shape-name, label: "Text"}`
 
 ## Process Artifact Taxonomy
 
@@ -71,37 +71,33 @@ During the creation of this document, it was noticed that not everything is easi
 ```mermaid
 flowchart LR
 
-    Mod@{ shape: div-rect, label: "Package != Module" }
-    Fun([Function / Method])
-    If{Filter / Logic}
-    Join((Merge / Join))
-    End(((CI/CD)))
+    Mod@{ shape: div-rect, label: "Package/Module" }
+    Fun([Function])
+    If{Filter}
+    IHC@{ shape: curv-trap, label: "Interface"}
 
+    Merge((Merge))
+    Join(((Join)))
     Human[\Human Task/]
-    AI[/AI Agent\]
-    Note@{ shape: braces, label: "Comment / Note" }
+    AI[/AI Task\]
 
-    Mod ~~~ Fun ~~~ If ~~~ Join 
-    End ~~~ Human ~~~ AI ~~~ Note
+    Mod ~~~ Fun ~~~ IHC ~~~ Human
+    If ~~~ Merge ~~~ Join ~~~ AI 
 
 ```
 
 ### Table of Process Artifact Taxonomy
 
-> Note: To use custom shapes the New Syntax is `Node@{ shape: shape-name, label: "Text"}`
-
----
-
 | Shape Name & Usual Meaning | Mermaid Syntax | Project Meaning |
 | :--- | :---: | :--- |
-| **Divided Rectangle**</br>Divided Process | `div-rect` | **Module:** A self-contained code package (e.g., `drugslm.scraper`). Represents a "Black Box" system. |
-| **Stadium**</br>Terminal Point | `id([Text])`</br>`stadium` | **Function/Method:** A specific logic block, class, or script that is crucial for understanding the flow. |
-| **Diamond**</br>Decision | `id{Text}`</br>`diamond` | **Filter / Logic Gate:** Conditional branching OR a "Many-to-One" filter (e.g., discarding invalid data). |
-| **Circle**</br>Start | `id((Text))`</br>`circle` | **Merge / Join:** The sophisticated unification of structured data streams. Not just a mix, but a join. |
-| **Double Circle**</br>Stop | `id(((T)))`</br>`double-circle` | **CI/CD:** A stable final state or completion of a major process flow and your continuous integration (CI) and continuous delivery (CD). |
-| **Trapezoid Top**</br>Manual Operation | `id[\Text/]`</br>`manual` | **Human Task:** Manual annotation, expert validation, creation of protocols, or ground truth sampling. |
-| **Trapezoid Bottom**</br>Priority Action | `id[/Text\]`</br>`priority` | **AI Task:** Automated intelligent processing (e.g., LLM-based labeling, synthetic data generation). |
-| **Braces**</br>Comment | `braces` | **Annotation:** Contextual notes, explanations, or "nice-to-know" info attached to nodes. |
+| **Divided Rectangle**</br>Divided Process | `div-rect` | **Package/Module**</br>A self-contained code package (e.g., `drugslm.sources`, `drugslm.sources.anvisa`) or module (e.g., `drugslm.sources.anvisa.catalog`). Redirect to respective reference page. |
+| **Stadium**</br>Terminal Point | `id([Text])`</br>`stadium` | **Function**</br>A specific logic block, class, or script that is crucial for understanding the flow. |
+| **Curved Trapezoid**</br>Display | `curv-trap` | **Interface**</br>Refers to any UI/UX compoment used or created. |
+| **Trapezoid Top**</br>Manual Operation | `id[\Text/]`</br>`manual` | **Human Task**</br>Manual annotation, expert validation, creation of protocols, or ground truth sampling. |
+| **Diamond**</br>Decision | `id{Text}`</br>`diamond` | **Filter**</br>Conditional branching OR a "Many-to-One" filter (e.g., discarding invalid data). |
+| **Circle**</br>Start | `id((Text))`</br>`circle` | **Merge**</br>Implies combining several files or tables that have the same structure. |
+| **Double Circle**</br>Stop | `id(((T)))`</br>`double-circle` | **Join**</br>The sophisticated unification of structured data streams with different structures. |
+| **Trapezoid Bottom**</br>Priority Action | `id[/Text\]`</br>`priority` | **AI Task**</br>Automated intelligent processing (e.g., LLM-based labeling, synthetic data generation). |
 
 ## Execution Status Lifecycle
 
@@ -127,17 +123,21 @@ flowchart LR
 
 ```
 
+---
+
+> Note: To use custom shapes the New Syntax is `Node@{ shape: shape-name, label: "Text"}`
+
 ### Table of Status Lifecycle
 
 ---
 
 | Class | Style Preview | Meaning |
 | :--- | :--- | :--- |
-| `:::done` | Green (Solid) | **Done:** Completed artifacts or processes. |
-| `:::active`| Yellow (Bold) | **Active:** Currently work-in-progress. |
-| `:::must` | Pink (Solid) | **Must:** Mandatory milestones. High priority. |
-| `:::todo` | Blue (Dashed) | **Todo:** Planned future tasks (Backlog). |
-| `:::dropped`| **Gray (Faded)**| **Aborted:** Features or paths that were discarded or de-prioritized. |
+| `:::done` | Green (Solid) | **Done**</br>Completed artifacts or processes. |
+| `:::active`| Yellow (Bold) | **Active**</br>Currently work-in-progress. |
+| `:::must` | Pink (Solid) | **Must**</br>Mandatory milestones. High priority. |
+| `:::todo` | Blue (Dashed) | **Todo**</br>Planned future tasks (Backlog). |
+| `:::dropped`| **Gray (Faded)**| **Aborted**</br>Features or paths that were discarded or de-prioritized. |
 
 ## Interaction Flows & Dependencies
 
@@ -178,11 +178,11 @@ flowchart
 
 | Syntax | Line Style | Project Meaning |
 | :--- | :--- | :--- |
-| `A ===> B` | **Thick Solid** | **Critical Path (MVP):** The core pipeline. Essential steps for thesis completion ("Rice and Beans"). |
-| `A --> B` | **Solid Arrow** | **Standard Flow:** Normal data transformation flow or sub-steps within a major process. |
-| `A -.-> B` | **Dotted Arrow** | **Experimental/Optional:** Secondary paths, "Nice-to-have" features, or exploratory branches ("The Dessert"). |
-| `A --- B` | **Solid Line** | **Context/Read-Only:** Static dependency. Data is accessed/read but not consumed/transformed (e.g., Configs). |
-| `A <--> B` | **Double Arrow** | **Feedback Loop:** Iterative process, optimization cycles, or bidirectional data exchange. |
+| `A ===> B` | **Thick Solid** | **Critical Path (MVP)**</br>The core pipeline. Essential steps for thesis completion ("Rice and Beans"). |
+| `A --> B` | **Solid Arrow** | **Standard Flow**</br>Normal data transformation flow or sub-steps within a major process. |
+| `A -.-> B` | **Dotted Arrow** | **Experimental/Optional**</br>Secondary paths, "Nice-to-have" features, or exploratory branches ("The Dessert"). |
+| `A --- B` | **Solid Line** | **Context/Read-Only**</br>Static dependency. Data is accessed/read but not consumed/transformed (e.g., Configs). |
+| `A <--> B` | **Double Arrow** | **Feedback Loop**</br>Iterative process, optimization cycles, or bidirectional data exchange. |
 
 ---
 
