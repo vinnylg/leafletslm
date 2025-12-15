@@ -27,7 +27,7 @@ services:
     build: *build_config
     image: drugslm:${VERSION}
     pull_policy: build
-    container_name: drugslm_docs
+    container_name: drugslm-docs
     profiles: ["docs", "all"]
     volumes:
       - ./:/workspace
@@ -42,7 +42,7 @@ services:
 
   mkdocs-funnel:
     image: tailscale/tailscale:latest
-    container_name: drugslm_docs_funnel
+    container_name: drugslm-docs-funnel
     profiles: ["funnel", "all"]
     network_mode: service:mkdocs
     depends_on:
@@ -60,7 +60,7 @@ services:
 
   selenium:
     image: selenium/hub:4.15.0
-    container_name: drugslm_selenium
+    container_name: drugslm-selenium
     profiles: ["scraper", "all"]
     networks:
       - drugslm_network
@@ -77,7 +77,7 @@ services:
 
   firefox:
     image: selenium/node-firefox:4.15.0
-    container_name: drugslm_firefox
+    container_name: drugslm-firefox
     profiles: ["scraper", "all"]
     shm_size: 4gb
     depends_on:
