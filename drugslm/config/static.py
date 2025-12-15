@@ -91,12 +91,12 @@ class _ConfigTree:
         Access it via: settings.browsers.firefox
     """
 
-    def __init__(self, root_path: Path):
+    def __init__(self, root_path: Path = PACKAGE_ROOT / "config"):
         """
         Initializes the configuration tree.
 
         Args:
-            root_path (Path): The root directory to scan for configurations.
+            root_path (Path): The root directory to scan for configurations. Defaults: PACKAGE_ROOT / "config"
         """
         self._root = root_path
         self._load_structure()
@@ -124,10 +124,10 @@ class _ConfigTree:
                 setattr(self, key, _Config(path))
 
     def __repr__(self) -> str:
-        return f"<_ConfigTree at {self._root.name}>"
+        return f"<_ConfigTree at {self._root}>"
 
 
 # Singleton Instantiation
-configs = _ConfigTree(PACKAGE_ROOT / "config")
+configs = _ConfigTree()
 
 __all__ = ["configs"]
