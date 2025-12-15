@@ -206,47 +206,6 @@ purge: clean
 
 
 #################################################################################
-# DAGSTER CONTROLLER                                                            #
-#################################################################################
-
-# Detect if the target is "dagster"
-ifeq (dagster,$(firstword $(MAKECMDGOALS)))
-  DAGSTER_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-  $(eval $(DAGSTER_ARGS):;@:)
-endif
-
-## Manage Dagster environment (Args: up, down, restart, clean)
-.PHONY: dagster
-dagster:
-	@if [ -z "$(DAGSTER_ARGS)" ]; then \
-		echo "Usage: make dagster [COMMAND]"; \
-		echo ""; \
-		echo "Commands:"; \
-		echo "  up       Start Dagster dev server (0.0.0.0:3000)"; \
-		echo "  down     Stop Dagster dev server"; \
-		echo "  restart  Restart the server"; \
-		echo "  clean    Clean Dagster storage (runs, schedules)"; \
-		echo ""; \
-	elif [ "$(DAGSTER_ARGS)" = "up" ]; then \
-		echo ">>> Starting Dagster..."; \
-		uv run dagster dev -h 0.0.0.0 -p 3000; \
-	elif [ "$(DAGSTER_ARGS)" = "down" ]; then \
-		echo ">>> Stopping Dagster..."; \
-		pkill -f "dagster dev" || echo "Dagster not running"; \
-	elif [ "$(DAGSTER_ARGS)" = "restart" ]; then \
-		$(MAKE) dagster down; \
-		$(MAKE) dagster up; \
-	elif [ "$(DAGSTER_ARGS)" = "clean" ]; then \
-		rm -rf .dagster/storage/*; \
-		rm -rf .logs_queue; \
-		mkdir -p .dagster/storage; \
-		echo ">>> Dagster storage cleaned"; \
-	else \
-		echo "Unknown command: '$(DAGSTER_ARGS)'"; \
-		exit 1; \
-	fi
-
-#################################################################################
 # DOCUMENTATION CONTROLLER                                                      #
 #################################################################################
 

@@ -19,7 +19,6 @@ Prerequisites:
 
 
 Author: Vinícius de Lima Gonçalves
-Documentation: Gemini 3.0 Pro (Student), Vinícius de Lima Gonçalves
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -43,13 +42,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 import typer
 from typing_extensions import Annotated
 
-from drugslm.scraper.anvisa.config import (
-    CATEGORIES,
-    CATEGORIES_URL,
-    INDEX_DIR,
-)
-from drugslm.scraper.selenium import get_firefox_options, highlight, scroll, webdriver_manager
+from drugslm.config import EXTERNAL, RAW
 from drugslm.utils.asserts import assert_text_number
+from drugslm.utils.selenium import highlight, scroll, webdriver_manager
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +52,17 @@ logger = logging.getLogger(__name__)
 
 SLEEPSECS = 1
 WAITSECS = 5
+
+CATEGORIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+CATEGORIES_URL = "https://consultas.anvisa.gov.br/#/bulario/q/?categoriasRegulatorias=%s"
+
+DADOS_ABERTOS_URL = "https://dados.anvisa.gov.br/dados/DADOS_ABERTOS_MEDICAMENTOS.csv"
+DADOS_ABERTOS = EXTERNAL / "anvisa" / "dados_abertos.csv"
+
+
+ANVISA_DIR = RAW / "anvisa"
+INDEX_DIR = ANVISA_DIR / "index"
+
 
 XPATH_PAGINATION = "//ul[contains(@class, 'pagination')]"
 XPATH_CURRENT_PAGE = f"{XPATH_PAGINATION}//li[contains(@class, 'active')]//a"
@@ -89,7 +95,7 @@ METADATA_COLUMNS = [
     "num_items",
 ]
 
-# PROGRESS_COLUMNS = [timestamp,category_id,current_page,last_page,saved_size]
+# PROGRESS_COLUMNS = ["timestamp","category_id","current_page","last_page","saved_size"] # out.write(",".join(f'"{col}"' for col in PROGRESS_COLUMNS) + "\n")
 
 # ====== Helpers (Primitives) ======
 
@@ -840,9 +846,7 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
             logger.warning(f"Skipping Category {category_id}: Metadata not found or empty.")
             return
 
-        options = get_firefox_options()
-
-        with webdriver_manager(options) as driver:
+        with webdriver_manager() as driver:
             scrap_pages(driver, category_id, force)
 
     except Exception as e:
@@ -968,7 +972,6 @@ def fetch_metadata() -> None:
 
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
 
-    options = get_firefox_options()
     fetch_values = []
 
     logger.info("--- Starting Fetch Routine for All Categories ---")
@@ -976,7 +979,7 @@ def fetch_metadata() -> None:
     try:
         for category_id in CATEGORIES:
             try:
-                with webdriver_manager(options) as driver:
+                with webdriver_manager() as driver:
                     stats = fetch_category_metadata(driver, category_id)
                     fetch_values.append(stats)
             except Exception as e:

@@ -31,21 +31,21 @@ flowchart LR
 
     classDef phase fill:#f0f4f8,stroke:#2c3e50,stroke-width:2px,color:#2c3e50;
 
-    P1(Phase 1<br/>Data Acquisition):::phase
-    P2(Phase 2<br/>Modeling):::phase
-    P3(Phase 3<br/>Training):::phase
-    P4(Phase 4<br/>Evaluation):::phase
-    P5(Phase 5<br/>Deployment):::phase
-    P6(Phase 6<br/>Monitoring):::phase
+    P1(1: Data Acquisition):::phase
+    P2(Phase 2:<br/>Modeling):::phase
+    P3(Phase 3:<br/>Training):::phase
+    P4(Phase 4:<br/>Evaluation):::phase
+    P5(Phase 5:<br/>Deployment):::phase
+    P6(Phase 6:<br/>Monitoring):::phase
 
     P1 <==> P2 <==> P3 <==> P4 <==> P5 <==> P6
 
-    click P1 "architecture/roadmap/#phase-1-data-acquisition-and-preparation-etl" "Go to Phase 1: Acquisition"
-    click P2 "architecture/roadmap/#phase-2-modeling-and-system-design" "Go to Phase 2: Modeling"
-    click P3 "architecture/roadmap/#phase-3-training-and-optimization" "Go to Phase 3: Training"
-    click P4 "architecture/roadmap/#phase-4-evaluation-and-validation" "Go to Phase 4: Evaluation"
-    click P5 "architecture/roadmap/#phase-5-deployment" "Go to Phase 5: Deployment"
-    click P6 "architecture/roadmap/#phase-6-monitoring-and-continuous-improvement" "Go to Phase 6: Monitoring"
+    click P1 "architecture/roadmap/#data-acquisition-and-preparation-etl" "Go to Phase 1: Acquisition"
+    click P2 "architecture/roadmap/#modeling-and-system-design" "Go to Phase 2: Modeling"
+    click P3 "architecture/roadmap/#training-and-optimization" "Go to Phase 3: Training"
+    click P4 "architecture/roadmap/#evaluation-and-validation" "Go to Phase 4: Evaluation"
+    click P5 "architecture/roadmap/#deployment" "Go to Phase 5: Deployment"
+    click P6 "architecture/roadmap/#monitoring-and-continuous-improvement" "Go to Phase 6: Monitoring"
 
 
 ```
@@ -87,6 +87,6 @@ flowchart LR
 
 This is an active research project. If you're interested in collaborating or have suggestions, feel free to open an issue or reach out.
 
-## 📄 License
+<!-- ## 📄 License
 
-This project is licensed under the BSD License. See [LICENSE](https://github.com/yourusername/drugslm/blob/main/LICENSE) for details.
+This project is licensed under the BSD License. See [LICENSE](LICENSE) for details. -->

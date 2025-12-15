@@ -71,7 +71,7 @@ During the creation of this document, it was noticed that not everything is easi
 ```mermaid
 flowchart LR
 
-    Mod@{ shape: div-rect, label: "Module / Subsystem" }
+    Mod@{ shape: div-rect, label: "Package != Module" }
     Fun([Function / Method])
     If{Filter / Logic}
     Join((Merge / Join))

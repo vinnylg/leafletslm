@@ -32,23 +32,23 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Architecture & Design:
-    - architecture/index.md
-    - Visual Standards: architecture/standards.md
-    - Data Roadmap:
-      - architecture/roadmap/index.md
-      - Phase 1 Detailment: architecture/roadmap/phase1.md
-    - Infrastructure: architecture/infrastructure.md
+      - architecture/index.md
+      - Visual Standards: architecture/standards.md
+      - Data Roadmap:
+          - architecture/roadmap/index.md
+          - Phase 1 Detailment: architecture/roadmap/phase1.md
+      - Infrastructure: architecture/infrastructure.md
   - API Reference:
       - reference/index.md
-      - Scraper:
-          - reference/scraper/index.md
-          - Selenium: reference/scraper/selenium.md
+      - Sources:
+          - reference/sources/index.md
           - Anvisa:
-              - reference/scraper/anvisa/index.md
-              - Pipelines: reference/scraper/anvisa/pipelines.md
-              - Catalog Builder: reference/scraper/anvisa/catalog.md
-              - Configuration: reference/scraper/anvisa/config.md
+              - reference/sources/anvisa/index.md
+              - Catalog Builder: reference/sources/anvisa/catalog.md
           - Wikipedia: []
-          - Drugscom: []
+      - Features: []
+      - Models: []
       - Database: []
-      - Modeling: []
+      - Analysis: []
+      - Utils:
+          - Selenium: reference/utils/selenium.md

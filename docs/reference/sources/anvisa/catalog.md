@@ -123,6 +123,6 @@ sequenceDiagram
 The core scraper logic responsible for navigating the ANVISA portal, handling pagination, and extracting tabular data.
 This data contains the real url for each drugs page in ANVISA webpage.
 
-::: drugslm.scraper.anvisa.catalog
+::: drugslm.sources.anvisa.catalog
     options:
         show_source: true

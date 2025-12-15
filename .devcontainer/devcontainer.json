@@ -2,8 +2,8 @@
   "name": "DrugSLM DevContainer",
   "dockerComposeFile": ["../compose.yaml"],
   "service": "drugslm",
+  "runServices": ["drugslm"],
   "overrideCommand": true,
-  "runServices": ["mkdocs"],
   "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {

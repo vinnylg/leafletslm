@@ -12,38 +12,27 @@ services:
     image: drugslm:${VERSION}
     pull_policy: build
     container_name: drugslm
-    profiles: ["dev","all"]
+    profiles: ["dev", "scraper", "all"]
+    networks:
+      - drugslm_network
     volumes:
       - ./:/workspace
+    environment:
+      - SELENIUM_HUB_URL=http://selenium:4444/wd/hub
     command: make sleep
     tty: true
     stdin_open: true
-
-  dagster:
-    build: *build_config
-    image: drugslm:${VERSION}
-    pull_policy: build
-    container_name: drugslm_dagster
-    profiles: ["pipeline","all"]
-    volumes:
-      - ./:/workspace
-    ports:
-      - "3000:3000"
-    command: make dagster up
-    environment: 
-      - DAGSTER_HOME=/workspace
-    tty: true
-    stdin_open: true
-    restart: unless-stopped
 
   mkdocs:
     build: *build_config
     image: drugslm:${VERSION}
     pull_policy: build
     container_name: drugslm_docs
-    profiles: ["docs","all"]
+    profiles: ["docs", "all"]
     volumes:
       - ./:/workspace
+    networks:
+      - drugslm_network
     ports:
       - "8000:8000"
     command: make docs watch
@@ -54,7 +43,7 @@ services:
   mkdocs-funnel:
     image: tailscale/tailscale:latest
     container_name: drugslm_docs_funnel
-    profiles: ["funnel","all"]
+    profiles: ["funnel", "all"]
     network_mode: service:mkdocs
     depends_on:
       - mkdocs
@@ -69,4 +58,67 @@ services:
       - NET_RAW
     restart: unless-stopped
 
-# TODO: Recolocar serviços aqui como o Selenium, mas usando o profiles: [scraper]
+  selenium:
+    image: selenium/hub:4.15.0
+    container_name: drugslm_selenium
+    profiles: ["scraper", "all"]
+    networks:
+      - drugslm_network
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+  firefox:
+    image: selenium/node-firefox:4.15.0
+    container_name: drugslm_firefox
+    profiles: ["scraper", "all"]
+    shm_size: 4gb
+    depends_on:
+      selenium:
+        condition: service_healthy
+    deploy:
+      replicas: ${FIREFOX_NODES:-1}
+    networks:
+      - drugslm_network
+    ports:
+      - "5900"
+      - "7900"
+    environment:
+      - SE_EVENT_BUS_HOST=selenium
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: drugslm-ollama
+    profiles: ["model", "all"]
+    networks:
+      - drugslm_network
+    ports:
+      - "11434:11434"
+    tty: true
+    stdin_open: true
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+networks:
+  drugslm_network:
+    name: drugslm_network
+
+volumes:
+  ollama:

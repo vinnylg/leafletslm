@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "beautifulsoup4>=4.14.2",
-    "dagster==1.12.1",
+    "filelock>=3.20.0",
     "ollama>=0.6.0",
     "pandas>=2.3.3",
     "python-dotenv>=1.0.0",
@@ -30,7 +30,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "dagster-webserver==1.12.1",
     "ipykernel>=7.1.0",
     "mkdocs>=1.6.1",
     "mkdocs-include-markdown-plugin>=7.2.0",
@@ -66,6 +65,7 @@ include = ["pyproject.toml", "drugslm/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Import sorting
+# ignore = ["I001"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["drugslm"]

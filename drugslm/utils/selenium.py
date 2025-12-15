@@ -6,36 +6,39 @@ This module provides utilities for managing Selenium WebDriver connections,
 specifically for remote drivers connected to a Selenium Hub.
 
 It includes:
-- A context manager 'webdriver_context' for safe setup/teardown.
-- A Dagster resource 'webdriver_resource'.
+- A context manager 'webdriver_manager' for safe setup/teardown.
 - A 'validate_driver_connection' health check function.
 - Helper functions for UI interaction and configuration loading.
 """
 
 from contextlib import contextmanager
 import logging
-from pathlib import Path
-from typing import Any, Dict, Iterator, Union
+import os
+from typing import Any, Iterator, Literal, Union
 
-from dagster import InitResourceContext, resource
 from retry import retry
 from selenium import webdriver
 from selenium.common.exceptions import JavascriptException
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-import yaml
 
-from drugslm.config import FIREFOX_OPTIONS, HUB_URL
+from drugslm.config.static import configs
+
+DEFAULT_HUB_URL = os.getenv("SELENIUM_HUB_URL", "http://localhost:4444/wd/hub")
 
 logger = logging.getLogger(__name__)
 
 
 @retry(tries=3, delay=10, backoff=1.5)
-def _create_driver(browser_options: Union[FirefoxOptions, Any]) -> WebDriver:
+def _create_driver(
+    hub_url: str,
+    browser_options: Union[FirefoxOptions, ChromeOptions],
+) -> WebDriver:
     """
     Handles the setup (initialization, validation) of a Selenium driver.
 
@@ -43,16 +46,17 @@ def _create_driver(browser_options: Union[FirefoxOptions, Any]) -> WebDriver:
     multiple times if it fails (e.g., hub startup race conditions).
 
     Args:
+        hub_url (str): The URL of the Selenium Hub.
         browser_options (FirefoxOptions | Any): The Selenium options object
             containing browser-specific capabilities.
 
     Returns:
         WebDriver: An initialized and validated WebDriver instance.
     """
-    logger.info(f"Attempting to connect to Selenium Hub at {HUB_URL}...")
+    logger.info(f"Attempting to connect to Selenium Hub at {hub_url}...")
 
     driver = webdriver.Remote(
-        command_executor=HUB_URL,
+        command_executor=hub_url,
         options=browser_options,
     )
 
@@ -63,13 +67,16 @@ def _create_driver(browser_options: Union[FirefoxOptions, Any]) -> WebDriver:
 
 
 @contextmanager
-def webdriver_manager(browser_options: Union[FirefoxOptions, Any]) -> Iterator[WebDriver]:
+def webdriver_manager(
+    hub_url: str = DEFAULT_HUB_URL,
+    browser: Literal["firefox", "chrome"] = "firefox",
+) -> Iterator[WebDriver]:
     """
     Manages the life cycle of a remote WebDriver as a context manager.
 
     Args:
-        browser_options (FirefoxOptions | Any): The Selenium options object
-            (e.g., FirefoxOptions, ChromeOptions) to be used.
+        hub_url (str): The URL of the Selenium Hub. Defaults to DEFAULT_HUB_URL.
+        browser (Literal["firefox", "chrome"]): The browser name to be used. Default "firefox".
 
     Yields:
         WebDriver: A live, validated Selenium WebDriver instance.
@@ -79,8 +86,16 @@ def webdriver_manager(browser_options: Union[FirefoxOptions, Any]) -> Iterator[W
             or if the 'retry' attempts fail.
     """
     driver = None
+
+    if browser == "firefox":
+        browser_options = get_firefox_options()
+    elif browser == "chrome":
+        raise NotImplementedError("Chrome not yet implemented")
+    else:
+        raise Exception(f"{browser} may be firefox or chrome")
+
     try:
-        driver = _create_driver(browser_options)
+        driver = _create_driver(hub_url, browser_options)
         yield driver
 
     except Exception as e:
@@ -89,48 +104,6 @@ def webdriver_manager(browser_options: Union[FirefoxOptions, Any]) -> Iterator[W
     finally:
         if driver:
             logger.info(f"Closing Selenium session: {driver.session_id}")
-            driver.quit()
-
-
-@resource(description="Manages the life cycle of a remote Selenium WebDriver.")
-def webdriver_resource(context: InitResourceContext) -> Iterator[WebDriver]:
-    """
-    Dagster resource that manages the setup, validation, and teardown of a remote WebDriver.
-
-    This resource uses the global HUB_URL constant and loads default Firefox options.
-
-    Args:
-        context (InitResourceContext): The Dagster resource context.
-
-    Yields:
-        WebDriver: A live, validated Selenium WebDriver instance.
-    """
-    # Note: context.log uses Dagster's internal logger, while other functions use Loguru.
-    log = context.log
-
-    # Assuming standard flow, we might want to catch config errors early
-    try:
-        browser_options = get_firefox_options()
-    except Exception as e:
-        log.error(f"Failed to load browser options: {str(e).splitlines()[0]}")
-        raise
-
-    driver = None
-    log.info(f"Attempting to connect to Selenium Hub at {HUB_URL}...")
-
-    try:
-        # Reuse the retry logic from _create_driver
-        driver = _create_driver(browser_options)
-        yield driver
-
-    except Exception as e:
-        log.error(
-            f"Failed to initialize or validate WebDriver in resource: {str(e).splitlines()[0]}"
-        )
-        raise
-    finally:
-        if driver:
-            log.info(f"Closing Selenium session: {driver.session_id}")
             driver.quit()
 
 
@@ -165,31 +138,23 @@ def validate_driver_connection(driver: WebDriver) -> bool:
         raise
 
 
-def get_firefox_options(config_path: Union[Path, str] = FIREFOX_OPTIONS) -> FirefoxOptions:
+def get_firefox_options() -> FirefoxOptions:
     """
-    Loads Firefox configurations from a YAML file and returns a configured object.
-
-    Args:
-        config_path (Path | str): The path to the YAML configuration file.
-            Defaults to the global FIREFOX_OPTIONS constant.
+    Loads Firefox configurations from the config object and returns the options.
 
     Returns:
-        FirefoxOptions: The configured options object for GeckoDriver.
+        FirefoxOptions: A configured options object ready for the GeckoDriver,
+            populated with arguments and preferences from the YAML/JSON file.
 
     Raises:
-        FileNotFoundError: If the configuration file is not found.
-        yaml.YAMLError: If the file cannot be parsed.
+        FileNotFoundError: If the config object is None or the underlying file is missing.
+        ValueError: If the file format is unsupported (handled by .load()).
     """
-    config_file = Path(config_path)
-    if not config_file.is_file():
-        logger.error(f"Configuration file not found at: {config_file}")
-        raise FileNotFoundError(f"Configuration file not found at: {config_file}")
 
-    logger.info(f"Loading Firefox options from: {config_file}")
+    if configs.browser.firefox is None:
+        raise FileNotFoundError("Configuration file is None")
 
-    with open(config_file, "r", encoding="utf-8") as f:
-        config: Dict[str, Any] = yaml.safe_load(f)
-
+    config = configs.browser.firefox.load()
     options = FirefoxOptions()
 
     arguments = config.get("arguments", [])
