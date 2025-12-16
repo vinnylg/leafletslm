@@ -1,8 +1,8 @@
-# Anvisa Catalog Module
+# Anvisa Categories Module Diagrams
 
-## Catalog Construction Pipeline
+## Sequece Diagram
 
-The module `drugslm.scraper.anvisa.catalog` operates following the flow below:
+The module `drugslm.sources.anvisa.categories` operates following the flow below:
 
 ```mermaid
 sequenceDiagram
@@ -117,12 +117,3 @@ sequenceDiagram
     CLI-->>User: Process Complete
     deactivate CLI
 ```
-
-## API
-
-The core scraper logic responsible for navigating the ANVISA portal, handling pagination, and extracting tabular data.
-This data contains the real url for each drugs page in ANVISA webpage.
-
-::: drugslm.sources.anvisa.catalog
-    options:
-        show_source: true

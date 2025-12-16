@@ -1,8 +1,6 @@
 # Infrastructure
 
-This document details the infrastructure setup, deployment configurations, and experimental hardware used in the DrugsLM project.
-
-# OLD ROADMAP ( TO BE DELETED )
+This document details the infrastructure setup, deployment configurations, and experimental hardware used in the DrugSLM project.
 
 ```mermaid
 flowchart TD
@@ -75,5 +73,3 @@ flowchart TD
 
     click AnvisaCat "reference/scraper/anvisa/catalog/" "See Anvisa Catalog Module"
 ```
-
-

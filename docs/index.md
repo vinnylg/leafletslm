@@ -1,8 +1,8 @@
-# DrugsLM - Small Language Model for Drug Information
+# DrugSLM - Small Language Model for Drug Information
 
 > **Master's Thesis Project** | Federal University of Paraná (UFPR) | Computer Science Department
 
-DrugsLM is a specialized Small Language Model (SLM) trained on drug package inserts and other pharmacological databases, designed to understand and generate accurate and simple pharmaceutical information.
+DrugSLM is a specialized Small Language Model (SLM) trained on drug package inserts and other pharmacological databases, designed to understand and generate accurate and simple pharmaceutical information.
 
 ## 🎓 Academic Context
 

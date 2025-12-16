@@ -14,7 +14,7 @@ It includes:
 from contextlib import contextmanager
 import logging
 import os
-from typing import Any, Iterator, Literal, Union
+from typing import Iterator, Literal, Union
 
 from retry import retry
 from selenium import webdriver
@@ -27,7 +27,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from drugslm.config.static import configs
+from drugslm.config.tree import default_configs
 
 DEFAULT_HUB_URL = os.getenv("SELENIUM_HUB_URL", "http://localhost:4444/wd/hub")
 
@@ -151,10 +151,10 @@ def get_firefox_options() -> FirefoxOptions:
         ValueError: If the file format is unsupported (handled by .load()).
     """
 
-    if configs.browser.firefox is None:
-        raise FileNotFoundError("Configuration file is None")
+    if default_configs.browser.firefox is None:
+        raise FileNotFoundError("Configuration tree is None")
 
-    config = configs.browser.firefox.load()
+    config = default_configs.browser.firefox.load()
     options = FirefoxOptions()
 
     arguments = config.get("arguments", [])

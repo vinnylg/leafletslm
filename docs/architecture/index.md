@@ -1,6 +1,6 @@
 # Architecture & System Design
 
-This section serves as the central repository for the architectural documentation of the **DrugsLM** project. It details the conceptual design, data processing workflows, and the physical infrastructure required to support the research experiments.
+This section serves as the central repository for the architectural documentation of the **DrugSLM** project. It details the conceptual design, data processing workflows, and the physical infrastructure required to support the research experiments.
 
 To ensure clarity, precision, and consistency across the project's documentation, we have established rigorous visual standards and logical roadmaps that guide the development and reproduction of the pipeline.
 
@@ -32,4 +32,4 @@ Select a topic below to explore the system's internal design:
 
 ---
 
-> **Note:** If you are looking for code-level documentation (classes and functions), please refer to the [API Reference](../reference/index.md).
+> **Note:** If you are looking for code-level documentation (classes and functions), please refer to the [API Reference](../reference/index.md)

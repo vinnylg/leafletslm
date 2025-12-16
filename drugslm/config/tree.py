@@ -10,7 +10,7 @@ from drugslm import PACKAGE_ROOT
 logger = logging.getLogger(__name__)
 
 
-class _Config:
+class Config:
     """
     Represents a single configuration file.
 
@@ -69,7 +69,7 @@ class _Config:
 
     def __repr__(self) -> str:
         """Returns a string representation for debugging purposes."""
-        return f"<_Config: {self.path.name}>"
+        return f"<Config: {self.path.name}>"
 
     def __fspath__(self) -> str:
         """
@@ -79,12 +79,12 @@ class _Config:
         return str(self.path)
 
 
-class _ConfigTree:
+class ConfigTree:
     """
     Recursively scans the configuration directory and creates a dynamic attribute tree.
 
     This class mirrors the file system structure of the 'config' folder.
-    Subdirectories become nested `_ConfigTree` objects, and files become `_Config` objects.
+    Subdirectories become nested `ConfigTree` objects, and files become `Config` objects.
 
     Usage:
         If the file structure is: drugslm/config/browsers/firefox.yaml
@@ -118,16 +118,18 @@ class _ConfigTree:
 
             if path.is_dir():
                 # Recursively create a tree for subdirectories
-                setattr(self, key, _ConfigTree(path))
+                setattr(self, key, ConfigTree(path))
             elif path.suffix in [".yaml", ".yml", ".json", ".toml"]:
-                # Wrap supported config files with _Config
-                setattr(self, key, _Config(path))
+                # Wrap supported config files with Config
+                setattr(self, key, Config(path))
 
     def __repr__(self) -> str:
-        return f"<_ConfigTree at {self._root}>"
+        return f"<ConfigTree at {self._root}>"
 
 
 # Singleton Instantiation
-configs = _ConfigTree()
+default_configs = ConfigTree()
 
-__all__ = ["configs"]
+__all__ = [
+    "default_configs",
+]

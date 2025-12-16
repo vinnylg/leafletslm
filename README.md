@@ -1,4 +1,4 @@
-# DrugsLM
+# DrugSLM
 
 [![CCDS](https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter)](https://cookiecutter-data-science.drivendata.org/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
@@ -12,7 +12,7 @@ Master's thesis in Computer Science at the Federal University of Paraná (UFPR),
 
 ## 🎯 Overview
 
-DrugsLM is a research project that aims to create a domain-specific language model trained on pharmaceutical data from regulatory agencies. Unlike general-purpose LLMs, DrugsLM focuses on:
+DrugSLM is a research project that aims to create a domain-specific language model trained on pharmaceutical data from regulatory agencies. Unlike general-purpose LLMs, DrugSLM focuses on:
 
 - **Accuracy**: Training exclusively on verified sources (ANVISA, FDA, medical literature)
 - **Multilingual**: Primary focus on Portuguese with English expansion
@@ -84,7 +84,7 @@ uv run python -m drugslm.scraper.anvisa.catalog run --check
 
 ## 📁 Project Structure
 
-```
+```sh
 drugslm/
 ├── dagster/                   # Orchestration layer (mirrors drugslm/)
 │   ├── scraper/              # Dagster assets for data acquisition
@@ -224,7 +224,7 @@ If you use this work in your research, please cite:
 ```bibtex
 @mastersthesis{goncalves2025drugslm,
   author  = {Gonçalves, Vinícius de Lima},
-  title   = {DrugsLM: A Small Language Model for Pharmaceutical Information},
+  title   = {DrugSLM: A Small Language Model for Pharmaceutical Information},
   school  = {Federal University of Paraná},
   year    = {2025},
   type    = {Master's Thesis},

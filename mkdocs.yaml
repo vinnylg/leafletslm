@@ -1,4 +1,4 @@
-site_name: DrugsLM Documentation
+site_name: DrugSLM Documentation
 site_author: Vinícius de Lima Gonçalves
 
 theme:
@@ -26,29 +26,36 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+          # format: !!python/name:pymdownx.superfences.fence_code_format or set "yaml.customTags": ["!python/name:*"]
 
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Architecture & Design:
+  - Project Architecture:
       - architecture/index.md
       - Visual Standards: architecture/standards.md
       - Data Roadmap:
           - architecture/roadmap/index.md
           - Phase 1 Detailment: architecture/roadmap/phase1.md
       - Infrastructure: architecture/infrastructure.md
+  - Library Design:
+      - design/index.md
+      - Sources:
+          - ANVISA:
+              - Categories: design/sources/anvisa/categories.md
   - API Reference:
       - reference/index.md
       - Sources:
           - reference/sources/index.md
-          - Anvisa:
+          - ANVISA:
               - reference/sources/anvisa/index.md
-              - Catalog Builder: reference/sources/anvisa/catalog.md
-          - Wikipedia: []
-      - Features: []
-      - Models: []
-      - Database: []
-      - Analysis: []
+              - Categories: reference/sources/anvisa/categories.md
+      # - Canonical: []
+      # - Features: []
+      # - Models: []
+      # - Database: []
+      # - Analysis: []
+      - Config:
+          - Tree: reference/config/tree.md
       - Utils:
           - Selenium: reference/utils/selenium.md

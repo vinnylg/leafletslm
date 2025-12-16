@@ -1,8 +1,5 @@
 """
-Scraper of Drugs Leaflets from the ANVISA website - Search and List
-================================================================================
-
-This module performs the sequential or parallel extraction of drugs returned
+This module performs the sequential or parallel extraction of drugs pages returned
 by the search by category, navigating through the interface and listing them
 with their URLs to get more information and download them later.
 
@@ -18,7 +15,8 @@ Prerequisites:
     - Firefox/Chrome nodes configured and connected to the Hub
 
 
-Author: Vinícius de Lima Gonçalves
+Authors:
+    - Vinícius de Lima Gonçalves
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -42,45 +40,44 @@ from selenium.webdriver.support.ui import WebDriverWait
 import typer
 from typing_extensions import Annotated
 
-from drugslm.config import EXTERNAL, RAW
+from drugslm.sources.anvisa import ANVISA_DIR, ANVISA_URL
 from drugslm.utils.asserts import assert_text_number
 from drugslm.utils.selenium import highlight, scroll, webdriver_manager
 
 logger = logging.getLogger(__name__)
 
-# ====== CONSTANTS ======
+# ====== RUNTIME CONSTANTS ======
 
 SLEEPSECS = 1
 WAITSECS = 5
 
-CATEGORIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-CATEGORIES_URL = "https://consultas.anvisa.gov.br/#/bulario/q/?categoriasRegulatorias=%s"
+# ====== CATEGORIES CONSTANTS =====
 
-DADOS_ABERTOS_URL = "https://dados.anvisa.gov.br/dados/DADOS_ABERTOS_MEDICAMENTOS.csv"
-DADOS_ABERTOS = EXTERNAL / "anvisa" / "dados_abertos.csv"
+CATEGORIES_ID = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+CATEGORIES_URL = ANVISA_URL + "?categoriasRegulatorias=%s"
 
+# ====== DIRS and OUTPUTS ======
 
-ANVISA_DIR = RAW / "anvisa"
-INDEX_DIR = ANVISA_DIR / "index"
+CATEGORIES_DIR = ANVISA_DIR / "categories"
+CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
 
+CRAWL_FILE = CATEGORIES_DIR / "crawled.csv"
+PROGRESS_FILE = CATEGORIES_DIR / "progress.csv"
+CHUNKS_DIR = CATEGORIES_DIR / "chunks"
+CATEGORIES_FILE = CATEGORIES_DIR / "categories.pkl"
+
+# ====== XPATH FOR HTML ELEMENTS =====
 
 XPATH_PAGINATION = "//ul[contains(@class, 'pagination')]"
 XPATH_CURRENT_PAGE = f"{XPATH_PAGINATION}//li[contains(@class, 'active')]//a"
 XPATH_LAST_PAGE = f"{XPATH_PAGINATION}//a[contains(@ng-switch-when, 'last')]"
 XPATH_PAGE_COUNT = "//div[contains(@class, 'ng-table-counts')]"
 
-# ====== OUTPUTS ======
-
-METADATA = INDEX_DIR / "metadata.csv"
-PROGRESS = INDEX_DIR / "scrap_progress.csv"
-CHUNKS_DIR = INDEX_DIR / "chunks"
-CATALOG = INDEX_DIR / "catalog.pkl"
-
 # ====== COLUMNS =====
 
-CATALOG_COLUMNS = [
-    "category_id",
-    "category_page",
+CATEGORIES_COLUMNS = [
+    "id",
+    "page",
     "medicamento",
     "link",
     "empresa",
@@ -89,13 +86,11 @@ CATALOG_COLUMNS = [
 ]
 
 METADATA_COLUMNS = [
-    "category_id",
+    "id",
     "page_size",
     "last_page",
     "num_items",
 ]
-
-# PROGRESS_COLUMNS = ["timestamp","category_id","current_page","last_page","saved_size"] # out.write(",".join(f'"{col}"' for col in PROGRESS_COLUMNS) + "\n")
 
 # ====== Helpers (Primitives) ======
 
@@ -373,7 +368,7 @@ def rotate_file(filepath: Path) -> None:
         logger.warning(f"Failed to rotate file {filepath}: {e}")
 
 
-def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
+def save_chunk(raw_data: list[list], category_id: int, page_num: int) -> int:
     """
     Saves a single page of scraped data to a pickle file.
 
@@ -391,7 +386,7 @@ def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
 
     full_data = [[category_id, page_num] + row for row in raw_data]
 
-    df = pd.DataFrame(data=full_data, columns=CATALOG_COLUMNS)
+    df = pd.DataFrame(data=full_data, columns=CATEGORIES_COLUMNS)
     df.to_pickle(output_path)
 
     logger.info(f"Table checkpoint saved: {output_path}")
@@ -403,8 +398,8 @@ def join_chunks(force: bool = False) -> None:
     Consolidates all individual page pickle files into a single DataFrame.
 
     Args:
-        force (bool): If True, completely overwrites the existing catalog file.
-                      If False, merges new chunks with the existing catalog,
+        force (bool): If True, completely overwrites the existing categories file.
+                      If False, merges new chunks with the existing categories,
                       deduplicating based on the 'expediente' column.
     """
 
@@ -419,13 +414,13 @@ def join_chunks(force: bool = False) -> None:
     try:
         new_data = pd.concat([pd.read_pickle(f) for f in all_files], ignore_index=True)
 
-        if force or not CATALOG.exists():
+        if force or not CATEGORIES_FILE.exists():
             logger.info("Overwriting final table.")
             final_df = new_data
         else:
-            logger.info("Merging new chunks with existing catalog.")
+            logger.info("Merging new chunks with existing categories.")
             try:
-                old_data = pd.read_pickle(CATALOG)
+                old_data = pd.read_pickle(CATEGORIES_FILE)
 
                 combined = pd.concat([old_data, new_data])
 
@@ -435,7 +430,7 @@ def join_chunks(force: bool = False) -> None:
                         ["expediente"],
                         keep=False,
                     )
-                ].to_pickle(INDEX_DIR / f"debug_dup_{timestamp}.pkl")
+                ].to_pickle(CATEGORIES_DIR / f"debug_dup_{timestamp}.pkl")
 
                 logger.info("Deduplicating based on 'expediente' keeping last")
                 final_df = combined.drop_duplicates(
@@ -450,10 +445,10 @@ def join_chunks(force: bool = False) -> None:
                 final_df = new_data
 
         # Save Final Result
-        final_df.to_pickle(CATALOG)
-        final_df.to_csv(CATALOG.with_suffix(".csv"), index=False)
+        final_df.to_pickle(CATEGORIES_FILE)
+        final_df.to_csv(CATEGORIES_FILE.with_suffix(".csv"), index=False)
 
-        logger.info(f"Consolidation complete. Saved {len(final_df)} rows to {CATALOG}")
+        logger.info(f"Consolidation complete. Saved {len(final_df)} rows to {CATEGORIES_FILE}")
 
         # Only delete chunks if consolidation was successful
         delete_chunks()
@@ -467,7 +462,7 @@ def delete_lock_progress() -> None:
     Removes stale lock files from previous executions to prevent deadlocks.
     This should be called only during single-threaded orchestration (start of pipeline).
     """
-    lock_file = PROGRESS.with_suffix(".csv.lock")
+    lock_file = PROGRESS_FILE.with_suffix(".csv.lock")
     if lock_file.exists():
         try:
             lock_file.unlink()
@@ -506,20 +501,20 @@ def delete_chunks(category_id: int | None = None) -> None:
 
 def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
     """
-    Appends execution metadata to a CSV file with file locking for concurrency safety.
+    Appends execution progress to a CSV file with file locking for concurrency safety.
 
     Args:
         category_id (int): The category ID.
         pages (dict): Pagination state dictionary {'current', 'next', 'last'}.
         saved_size (int): Number of rows saved in this step.
     """
-    lock_path = PROGRESS.with_suffix(".csv.lock")
+    lock_path = PROGRESS_FILE.with_suffix(".csv.lock")
 
     with FileLock(lock_path):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        with open(PROGRESS, "a") as out:
-            if not PROGRESS.exists() or PROGRESS.stat().st_size == 0:
+        with open(PROGRESS_FILE, "a") as out:
+            if not PROGRESS_FILE.exists() or PROGRESS_FILE.stat().st_size == 0:
                 out.write("timestamp,category_id,current_page,last_page,saved_size\n")
 
             out.write(
@@ -527,27 +522,27 @@ def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
             )
 
 
-def get_catalog() -> pd.DataFrame | None:
-    """Loads the final consolidated catalog. Returns empty DataFrame if not found.
+def get_categories() -> pd.DataFrame | None:
+    """Loads the final consolidated categories. Returns empty DataFrame if not found.
 
     Returns:
-        pd.DataFrame: consolidated catalog DataFrame
+        pd.DataFrame: consolidated categories DataFrame
         None: if file is missing
     """
     try:
-        df = pd.read_pickle(CATALOG)
+        df = pd.read_pickle(CATEGORIES_FILE)
         if not df.empty:
             return df
 
     except FileNotFoundError:
-        logger.warning(f"Index table {CATALOG} not found. Returning None.")
+        logger.warning(f"Index table {CATEGORIES_FILE} not found. Returning None.")
     except Exception as e:
-        logger.error(f"Error reading catalog table: {str(e).splitlines()[0]}")
+        logger.error(f"Error reading categories table: {str(e).splitlines()[0]}")
 
 
-def get_metadata(category_id: int | None = None) -> pd.DataFrame | None:
+def get_crawled(category_id: int | None = None) -> pd.DataFrame | None:
     """
-    Loads the categories metadata file. Returns the whole DF or specific category size.
+    Loads the categories crawled file. Returns the whole DF or specific category size.
 
     Args:
         category_id (int | None): Optional ID to filter specific size.
@@ -557,18 +552,18 @@ def get_metadata(category_id: int | None = None) -> pd.DataFrame | None:
         None: If not found or error
     """
 
-    if not METADATA.exists():
-        logger.warning(f"Fetch file not found at {METADATA}. Returning None.")
+    if not CRAWL_FILE.exists():
+        logger.warning(f"Fetch file not found at {CRAWL_FILE}. Returning None.")
         return None
 
     try:
-        df = pd.read_csv(METADATA)
+        df = pd.read_csv(CRAWL_FILE)
 
         if category_id is None:
-            logger.info(f"Loaded fetched categories metadata ({len(df)} records).")
+            logger.info(f"Loaded crawled categories metadata ({len(df)} records).")
             return df if not df.empty else None
 
-        row = df.loc[df["category_id"] == category_id]
+        row = df.loc[df["id"] == category_id]
 
         if row.empty:
             logger.warning(f"Category {category_id} not found in metadata file.")
@@ -583,9 +578,9 @@ def get_metadata(category_id: int | None = None) -> pd.DataFrame | None:
         return None
 
 
-def check_catalog(category_id: int | None = None) -> int:
+def check_categories(category_id: int | None = None) -> int:
     """
-    Checks the consistency between the local catalog and the ANVISA database.
+    Checks the consistency between the local categories and the ANVISA database.
 
     Args:
         category_id (int | None): ID to check specific category consistency.
@@ -595,21 +590,21 @@ def check_catalog(category_id: int | None = None) -> int:
         f"--- Starting Index Check (Target: {category_id if category_id else 'Global'}) ---"
     )
 
-    if (df_local := get_catalog()) is None:
-        logger.error("Could not obtain local catalog for comparison.")
+    if (df_local := get_categories()) is None:
+        logger.error("Could not obtain local categories for comparison.")
         return -1
 
     if category_id:
-        df_local = df_local[df_local["category_id"] == category_id]
+        df_local = df_local[df_local["id"] == category_id]
 
     local_size = len(df_local)
-    logger.info(f"Local catalog found: {local_size} records.")
+    logger.info(f"Local categories found: {local_size} records.")
 
-    if (df_meta := get_metadata(category_id)) is None:
+    if (crawled_df := get_crawled(category_id)) is None:
         logger.error("Could not obtain metadata for comparison.")
         return -1
 
-    expected_size = df_meta["num_items"].sum()
+    expected_size = crawled_df["num_items"].sum()
     diff = expected_size - local_size
 
     logger.info("--- Index Consistency Report ---")
@@ -619,11 +614,11 @@ def check_catalog(category_id: int | None = None) -> int:
     logger.info("-" * 34)
 
     if diff == 0:
-        logger.info("Local catalog is complete.")
+        logger.info("Local categories is complete.")
     elif diff > 0:
         logger.warning(f"Missing {diff} records.")
     else:
-        logger.warning(f"Local catalog has {-diff} more records than fetched.")
+        logger.warning(f"Local categories has {-diff} more records than fetched.")
 
     return diff
 
@@ -636,13 +631,13 @@ def get_last_processed_page(category_id: int) -> pd.DataFrame | None:
         pd.DataFrame: last entry found for category_id or None
     """
 
-    if not PROGRESS.exists():
+    if not PROGRESS_FILE.exists():
         logger.info("Progress file not found")
         return
 
     try:
-        df = pd.read_csv(PROGRESS)
-        df_cat = df[df["category_id"] == category_id]
+        df = pd.read_csv(PROGRESS_FILE)
+        df_cat = df[df["id"] == category_id]
 
         if not df_cat.empty:
             last_entry = df_cat.iloc[-1]
@@ -721,7 +716,7 @@ def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
 # ====== Scraper Core Business Logic (Process) ======
 
 
-def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> None:
+def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> None:
     """
     Iterates through all pages of a specific regulatory category, extracting and saving data.
 
@@ -793,7 +788,7 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
             logger.warning(f"No data found on page {pages['current']}. Stopping category.")
             break
 
-        saved_size = save_chuck(data, category_id, pages["current"])
+        saved_size = save_chunk(data, category_id, pages["current"])
         save_progress(category_id, pages, saved_size)
         search_size += saved_size
 
@@ -821,14 +816,14 @@ def scrap_pages(driver: WebDriver, category_id: int, force: bool = False) -> Non
     logger.info(f"Category {category_id} processing complete. Total rows saved: {search_size}")
 
 
-def scrap_unit_category(category_id: int, force: bool = False) -> None:
+def scrape_unit(category_id: int, force: bool = False) -> None:
     """
     Orchestrates the scraping process for a single regulatory category.
 
     This function acts as an isolated worker that:
-    1. Validates the category against fetched metadata (skipping if empty or missing).
+    1. Validates the category against crawled metadata (skipping if empty or missing).
     2. Manages the lifecycle of a dedicated Selenium WebDriver instance.
-    3. Delegates the actual extraction logic to `scrap_pages`.
+    3. Delegates the actual extraction logic to `scrape_pages`.
     4. Encapsulates error handling to ensure thread safety and fault tolerance.
 
     Args:
@@ -839,15 +834,15 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
     try:
         logger.info(f"--- Starting Process for Category {category_id} ---")
 
-        if (metadata := get_metadata(category_id)) is not None:
-            expected = int(metadata["num_items"].sum())
+        if (crawled_df := get_crawled(category_id)) is not None:
+            expected = int(crawled_df["num_items"].sum())
             logger.info(f"Category {category_id}: Expecting {expected} items.")
         else:
             logger.warning(f"Skipping Category {category_id}: Metadata not found or empty.")
             return
 
         with webdriver_manager() as driver:
-            scrap_pages(driver, category_id, force)
+            scrape_pages(driver, category_id, force)
 
     except Exception as e:
         logger.exception(f"Process failed for Category {category_id}: {str(e).splitlines()[0]}")
@@ -856,7 +851,7 @@ def scrap_unit_category(category_id: int, force: bool = False) -> None:
 # ====== Fetch Core Business Logic (Process) ======
 
 
-def fetch_category_metadata(driver: WebDriver, category_id: int) -> list:
+def crawl_unit(driver: WebDriver, category_id: int) -> list:
     """
     Navigates to the first and last page of a category to estimate data volume.
 
@@ -865,11 +860,11 @@ def fetch_category_metadata(driver: WebDriver, category_id: int) -> list:
         category_id (int): The regulatory category ID.
 
     Returns:
-        list: ["category_id", "page_size", "last_page", "num_items"].
+        list: ["id", "page_size", "last_page", "num_items"].
     """
     try:
         url = CATEGORIES_URL % str(category_id)
-        logger.info(f"Fetching metadata for Category {category_id} | URL: {url}")
+        logger.info(f"Crawling metadata for Category {category_id} | URL: {url}")
 
         driver.get(url)
 
@@ -913,7 +908,7 @@ def fetch_category_metadata(driver: WebDriver, category_id: int) -> list:
 # ====== Orchestration (Execution) ======
 
 
-def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
+def scrape(n_threads: int = 1, force: bool = False) -> None:
     """
     Orchestrates the parallel scraping of all categories.
 
@@ -929,8 +924,6 @@ def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
     """
     logger.info(f"--- Starting Scraping Pipeline (Threads: {n_threads}, Force: {force}) ---")
 
-    INDEX_DIR.mkdir(parents=True, exist_ok=True)
-
     delete_lock_progress()
 
     if force:
@@ -939,17 +932,17 @@ def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
 
         logger.info("Performing global cleanup: Rotating main artifacts.")
 
-        rotate_file(PROGRESS)
-        rotate_file(CATALOG)
+        rotate_file(PROGRESS_FILE)
+        rotate_file(CATEGORIES_FILE)
 
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
         list(
             executor.map(
                 partial(
-                    scrap_unit_category,
+                    scrape_unit,
                     force=force,
                 ),
-                CATEGORIES,
+                CATEGORIES_ID,
             )
         )
 
@@ -960,27 +953,25 @@ def scrap_categories(n_threads: int = 1, force: bool = False) -> None:
     logger.info("Scraping Pipeline Finished")
 
 
-def fetch_metadata() -> None:
+def crawl() -> None:
     """
-    Orchestrates metadata fetching for all categories listed in CATEGORIES.
+    Orchestrates metadata fetching for all categories listed in CATEGORIES_ID.
 
-    Generates a CSV file (METADATA) containing the number of items and pages
+    Generates a CSV file (CRAWL_FILE) containing the number of items and pages
     for each category, which serves as the baseline for validation.
     """
     logger.info("--- Setup Fetch Execution ---")
-    rotate_file(METADATA)
-
-    INDEX_DIR.mkdir(parents=True, exist_ok=True)
+    rotate_file(CRAWL_FILE)
 
     fetch_values = []
 
     logger.info("--- Starting Fetch Routine for All Categories ---")
 
     try:
-        for category_id in CATEGORIES:
+        for category_id in CATEGORIES_ID:
             try:
                 with webdriver_manager() as driver:
-                    stats = fetch_category_metadata(driver, category_id)
+                    stats = crawl_unit(driver, category_id)
                     fetch_values.append(stats)
             except Exception as e:
                 logger.error(
@@ -989,9 +980,9 @@ def fetch_metadata() -> None:
                 fetch_values.append([category_id, 0, 0, 0])
 
         fetch_df = pd.DataFrame(fetch_values, columns=METADATA_COLUMNS)
-        fetch_df.to_csv(METADATA, index=False)
+        fetch_df.to_csv(CRAWL_FILE, index=False)
 
-        logger.info(f"Fetch complete. Metadata saved to {METADATA}")
+        logger.info(f"Fetch complete. Metadata saved to {CRAWL_FILE}")
 
     except Exception as e:
         logger.critical(f"Critical error during categories fetch: {str(e).splitlines()[0]}")
@@ -1016,7 +1007,7 @@ def run(
             "-t",
             help="Number of threads for parallel processing.",
             min=1,
-            max=len(CATEGORIES),
+            max=len(CATEGORIES_ID),
             show_default=True,
         ),
     ] = 1,
@@ -1034,25 +1025,25 @@ def run(
         typer.Option(
             "--check",
             "-c",
-            help="Only check execution status (Local Index vs Remote Metadata).",
+            help="Only check execution status (Local Crawled vs Remote Metadata).",
             show_default=False,
         ),
     ] = False,
-    fetch_only: Annotated[
+    crawl_only: Annotated[
         bool,
         typer.Option(
-            "--fetch-only",
-            "--fetch",
-            help="Only Fetch fresh metadata from ANVISA and exit.",
+            "--crawl-only",
+            "--crawl",
+            help="Only crawl fresh metadata from ANVISA and exit.",
             show_default=False,
         ),
     ] = False,
-    skip_fetch: Annotated[
+    skip_crawl: Annotated[
         bool,
         typer.Option(
-            "--no-fetch",
-            "--skip-fetch",
-            help="Skip fetching fresh metadata (uses existing file).",
+            "--no-crawl",
+            "--skip-crawl",
+            help="Skip crawling fresh metadata (uses existing file).",
             show_default=False,
         ),
     ] = False,
@@ -1062,18 +1053,18 @@ def run(
     """
     try:
         if check:
-            check_catalog()
+            check_categories()
             return
 
-        if not skip_fetch:
-            fetch_metadata()
+        if not skip_crawl:
+            crawl()
 
-        if fetch_only:
+        if crawl_only:
             return
 
         logger.info(f"Starting pipeline (Threads: {n_threads}, Force: {force})...")
 
-        scrap_categories(n_threads=n_threads, force=force)
+        scrape(n_threads=n_threads, force=force)
 
         logger.info(f"Pipeline execution complete. Log: {log_file_path.resolve()}")
 

@@ -1,3 +1,3 @@
-# DrugsLM
+# DrugSLM
 
 README
