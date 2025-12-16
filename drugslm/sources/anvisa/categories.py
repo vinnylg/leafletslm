@@ -1,19 +1,45 @@
-"""
-This module performs the sequential or parallel extraction of drugs pages returned
-by the search by category, navigating through the interface and listing them
-with their URLs to get more information and download them later.
+"""ANVISA Drug Categories Scraper.
+
+This module is responsible for the extraction of drug listing data from ANVISA's
+search interface, categorized by regulatory definitions. It navigates through
+pagination, extracts tabular data, and consolidates it for downstream processing.
+
+Scope:
+    This module is responsible for:
+    - Iterating through specific regulatory categories (IDs 1-12).
+    - Handling Selenium pagination and table parsing.
+    - Persisting raw chunks of data to avoid data loss during long runs.
+    - Consolidating chunks into a final Pickle/CSV dataset.
+    - Checking consistency between fetched metadata and scraped data.
+
+    This module is not responsible for:
+    - Downloading PDFs or leaflets (handled by a separate downloader module).
+    - Parsing the content of the leaflets.
+    - interacting with the "Dados Abertos" API directly (uses Selenium).
 
 Execution Flow:
-    1. Connects to remote Selenium Hub (Firefox)
-    2. Access the search page by regulatory categories
-    3. Iterate and anotate over all results pages (CSV)
-    4. Extract and save tabular data from each page (Pickle)
-    5. Consolidates and saves final result (Pickle, CSV)
+    1.  **Orchestration (`scrape`)**: Initializes thread pool and manages directory setup.
+    2.  **Unit Execution (`scrape_unit`)**: Instantiates a WebDriver for a specific category.
+    3.  **Navigation (`scrape_pages`)**: Accesses the category URL and iterates through pages.
+    4.  **Extraction (`table2data`)**: Parses HTML tables into structured lists.
+    5.  **Persistence (`save_chuck`)**: Saves intermediate data (chunks) to disk.
+    6.  **Consolidation (`join_chunks`)**: Merges all chunks into a single dataset.
+
+Data Persistence:
+    - **Chunks**: Temporary `.pkl` files saved per page in `data/raw/anvisa/categories/chunks/`.
+    - **Progress**: `progress.csv` tracks the last successfully saved page per category.
+    - **Final Output**: `categories.pkl` and `categories.csv` containing the consolidated dataframe.
+    - **Metadata**: `crawled.csv` containing the expected number of items per category.
 
 Prerequisites:
-    - Selenium Hub running and accessible via HUB_URL
-    - Firefox/Chrome nodes configured and connected to the Hub
+    - Selenium Grid (Hub) running and accessible via `HUB_URL`.
+    - Firefox/Chrome nodes connected to the Hub.
+    - Python environment with `selenium`, `pandas`, `beautifulsoup4`, `typer`.
 
+Known Limitations:
+    - Dependent on specific XPath structures (`XPATH_PAGINATION`, `XPATH_PAGE_COUNT`).
+      UI changes on the ANVISA portal may break the scraper.
+    - The "Items per page" selector is fragile and may fail if the DOM loads slowly.
 
 Authors:
     - Vinícius de Lima Gonçalves
@@ -49,29 +75,49 @@ logger = logging.getLogger(__name__)
 # ====== RUNTIME CONSTANTS ======
 
 SLEEPSECS = 1
+"""int: Time in seconds to wait between page transitions to avoid rate limiting."""
+
 WAITSECS = 5
+"""int: Maximum time in seconds to wait for an element to appear (Explicit Wait)."""
 
 # ====== CATEGORIES CONSTANTS =====
 
 CATEGORIES_ID = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+"""list[int]: List of regulatory category IDs to be scraped from the ANVISA portal."""
+
 CATEGORIES_URL = ANVISA_URL + "?categoriasRegulatorias=%s"
+"""str: Template URL for the search page, expecting a category ID as a parameter."""
 
 # ====== DIRS and OUTPUTS ======
 
 CATEGORIES_DIR = ANVISA_DIR / "categories"
-CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
+"""Path: Main directory for storing category-related data."""
 
 CRAWL_FILE = CATEGORIES_DIR / "crawled.csv"
+"""Path: File storing metadata (count/pages) fetched from the portal for validation."""
+
 PROGRESS_FILE = CATEGORIES_DIR / "progress.csv"
+"""Path: File tracking the scraping progress to allow resuming execution."""
+
 CHUNKS_DIR = CATEGORIES_DIR / "chunks"
+"""Path: Directory for temporary pickle files containing page-level data."""
+
 CATEGORIES_FILE = CATEGORIES_DIR / "categories.pkl"
+"""Path: Final consolidated output file containing all scraped data."""
 
 # ====== XPATH FOR HTML ELEMENTS =====
 
 XPATH_PAGINATION = "//ul[contains(@class, 'pagination')]"
+"""str: XPath to locate the pagination container."""
+
 XPATH_CURRENT_PAGE = f"{XPATH_PAGINATION}//li[contains(@class, 'active')]//a"
+"""str: XPath to locate the currently active page number."""
+
 XPATH_LAST_PAGE = f"{XPATH_PAGINATION}//a[contains(@ng-switch-when, 'last')]"
+"""str: XPath to locate the 'Last' button in pagination."""
+
 XPATH_PAGE_COUNT = "//div[contains(@class, 'ng-table-counts')]"
+"""str: XPath to locate the 'items per page' dropdown/buttons container."""
 
 # ====== COLUMNS =====
 
@@ -84,6 +130,7 @@ CATEGORIES_COLUMNS = [
     "expediente",
     "data_pub",
 ]
+"""list[str]: Column names for the final scraped dataset."""
 
 METADATA_COLUMNS = [
     "id",
@@ -91,23 +138,23 @@ METADATA_COLUMNS = [
     "last_page",
     "num_items",
 ]
+"""list[str]: Column names for the metadata (crawled) file."""
 
 # ====== Helpers (Primitives) ======
 
 
 def sel_max_items_page(driver: WebDriver) -> int:
-    """
-    Attempts to select the highest available "items per page" option (e.g., 50).
-    Iterates through options in reverse order.
+    """Attempts to select the highest available "items per page" option (e.g., 50).
 
-    If the highest option fails, it tries the next lower one.
-    This function swallows exceptions to prevent script execution stoppage.
+    Iterates through options in reverse order (highest to lowest). If the highest
+    option fails, it tries the next lower one. Exceptions are swallowed to prevent
+    script execution stoppage, defaulting to 0 if unsuccessful.
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
 
     Returns:
-        int: The selected items per page. Returns 0 if failed.
+        int: The selected items per page value. Returns 0 if failed.
     """
     try:
         container = WebDriverWait(driver, WAITSECS).until(
@@ -150,14 +197,17 @@ def sel_max_items_page(driver: WebDriver) -> int:
 
 
 def table2data(element: WebElement) -> list:
-    """
-    Parses the HTML table element and extracts rows into a list of data.
+    """Parses the HTML table element and extracts rows into a list of data.
+
+    Uses BeautifulSoup for efficient parsing of the inner HTML of the WebElement.
 
     Args:
         element (WebElement): The Selenium WebElement containing the `<table>`.
 
     Returns:
-        list: A list of lists [medicamento, link, empresa, expediente, data_pub] or an empty list [].
+        list: A list of lists, where each inner list represents a row:
+              [medicamento, link, empresa, expediente, data_pub].
+              Returns empty list [] on failure.
     """
     try:
         logger.info("Starting table HTML parsing...")
@@ -210,23 +260,21 @@ def table2data(element: WebElement) -> list:
 
 
 def get_pages(driver: WebDriver) -> Tuple[dict, WebElement | None, WebElement | None]:
-    """
-    Captures the current state of pagination controls and the next page element.
+    """Captures the current state of pagination controls and the next page element.
 
     Retries on failure (e.g., StaleElementReferenceException, TimeoutException).
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
 
-    Raises:
-        TimeoutException: If the pagination container is not found.
-        NoSuchElementException: If specific page elements (active/last/next) are missing.
-
     Returns:
-        Tuple[dict, WebElement]: A tuple containing:
+        Tuple[dict, WebElement, WebElement]: A tuple containing:
             - dict: A dictionary with keys 'current', 'next', and 'last' (all integers).
-            - WebElement: The Selenium element corresponding to the *next* page button or None.
-            - WebElement: The Selenium element corresponding to the *last* page button or None.
+            - WebElement: The Selenium element corresponding to the *next* page button (or None).
+            - WebElement: The Selenium element corresponding to the *last* page button (or None).
+
+    Raises:
+        TimeoutException: If the pagination container is not found (caught internally, returns default).
     """
     try:
         pagination = WebDriverWait(driver, WAITSECS).until(
@@ -275,23 +323,21 @@ def get_pages(driver: WebDriver) -> Tuple[dict, WebElement | None, WebElement | 
 
 
 def resolve_next_page(current_page: WebElement, last_page: WebElement) -> Tuple[int, int, int]:
-    """
-    Parses pagination WebElements to extract current, last, and calculates next page numbers.
+    """Parses pagination WebElements to extract page numbers and calculate the next target.
 
-    This function validates that the text content of the elements are numeric
-    before converting them. It also handles the logic to determine the next page number,
-    preventing it from exceeding the last page.
+    Validates that the text content of the elements is numeric before converting.
+    Logic ensures `next_page` does not exceed `last_page`.
 
     Args:
         current_page (WebElement): The WebElement representing the currently active page.
         last_page (WebElement): The WebElement representing the last available page.
 
-    Raises:
-        AssertionError: If the text of the provided elements is not numeric (via assert_text_number).
-        ValueError: If conversion to integer fails.
-
     Returns:
-        Tuple[int, int, int]: A tuple containing (current_page_num, last_page_num, next_page_num).
+        Tuple[int, int, int]: (current_page_num, last_page_num, next_page_num).
+
+    Raises:
+        AssertionError: If element text is not numeric.
+        ValueError: If conversion to integer fails.
     """
     current_page_text = current_page.text.strip()
     assert_text_number(current_page_text)
@@ -310,11 +356,9 @@ def resolve_next_page(current_page: WebElement, last_page: WebElement) -> Tuple[
 
 @retry(tries=2, delay=2, backoff=2, logger=None)
 def find_table(driver: WebDriver) -> WebElement:
-    """
-    Waits for the main results table to be present in the DOM.
+    """Waits for the main results table to be present in the DOM.
 
-    This function uses visual helpers (scroll and highlight) to indicate
-    the found table during execution.
+    Uses visual helpers (scroll and highlight) to assist debugging and visibility.
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
@@ -348,9 +392,12 @@ def find_table(driver: WebDriver) -> WebElement:
 
 
 def rotate_file(filepath: Path) -> None:
-    """
-    Renames a file by appending a timestamp, acting as a backup rotation.
-    Example: 'data.csv' -> 'data_20231027103000.csv'
+    """Renames a file by appending a timestamp, acting as a backup rotation.
+
+    Example: `data.csv` -> `data_20231027103000.csv`
+
+    Args:
+        filepath (Path): Path object to the file to be rotated.
     """
     if not filepath.exists():
         return
@@ -368,9 +415,10 @@ def rotate_file(filepath: Path) -> None:
         logger.warning(f"Failed to rotate file {filepath}: {e}")
 
 
-def save_chunk(raw_data: list[list], category_id: int, page_num: int) -> int:
-    """
-    Saves a single page of scraped data to a pickle file.
+def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
+    """Saves a single page of scraped data to a pickle file (chunk).
+
+    Adds metadata columns (category_id, page_num) to the raw data before saving.
 
     Args:
         raw_data (list): The raw data list extracted from the table.
@@ -394,13 +442,14 @@ def save_chunk(raw_data: list[list], category_id: int, page_num: int) -> int:
 
 
 def join_chunks(force: bool = False) -> None:
-    """
-    Consolidates all individual page pickle files into a single DataFrame.
+    """Consolidates all individual page pickle files into a single DataFrame.
+
+    It can either overwrite the existing final file or merge new chunks with
+    the existing data, handling deduplication based on 'expediente'.
 
     Args:
         force (bool): If True, completely overwrites the existing categories file.
-                      If False, merges new chunks with the existing categories,
-                      deduplicating based on the 'expediente' column.
+                      If False, merges new chunks with existing data.
     """
 
     all_files = list(CHUNKS_DIR.glob("*.pkl"))
@@ -458,8 +507,8 @@ def join_chunks(force: bool = False) -> None:
 
 
 def delete_lock_progress() -> None:
-    """
-    Removes stale lock files from previous executions to prevent deadlocks.
+    """Removes stale lock files from previous executions to prevent deadlocks.
+
     This should be called only during single-threaded orchestration (start of pipeline).
     """
     lock_file = PROGRESS_FILE.with_suffix(".csv.lock")
@@ -472,11 +521,11 @@ def delete_lock_progress() -> None:
 
 
 def delete_chunks(category_id: int | None = None) -> None:
-    """
-    Deletes temporary chunk files.
+    """Deletes temporary chunk files from the chunk directory.
 
     Args:
         category_id (int | None): If provided, deletes only chunks for that category.
+                                  If None, deletes all chunks in the directory.
     """
     # 1. Limpeza de Chunks
     pattern = f"{category_id}_*.pkl" if category_id else "*.pkl"
@@ -500,11 +549,12 @@ def delete_chunks(category_id: int | None = None) -> None:
 
 
 def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
-    """
-    Appends execution progress to a CSV file with file locking for concurrency safety.
+    """Appends execution progress to a CSV file with file locking.
+
+    This ensures that multiple threads do not corrupt the progress file.
 
     Args:
-        category_id (int): The category ID.
+        category_id (int): The category ID being processed.
         pages (dict): Pagination state dictionary {'current', 'next', 'last'}.
         saved_size (int): Number of rows saved in this step.
     """
@@ -523,11 +573,11 @@ def save_progress(category_id: int, pages: dict, saved_size: int) -> None:
 
 
 def get_categories() -> pd.DataFrame | None:
-    """Loads the final consolidated categories. Returns empty DataFrame if not found.
+    """Loads the final consolidated categories DataFrame.
 
     Returns:
-        pd.DataFrame: consolidated categories DataFrame
-        None: if file is missing
+        pd.DataFrame: Consolidated categories DataFrame.
+        None: If the file is missing or empty.
     """
     try:
         df = pd.read_pickle(CATEGORIES_FILE)
@@ -541,15 +591,16 @@ def get_categories() -> pd.DataFrame | None:
 
 
 def get_crawled(category_id: int | None = None) -> pd.DataFrame | None:
-    """
-    Loads the categories crawled file. Returns the whole DF or specific category size.
+    """Loads the crawled metadata file.
+
+    Can return the entire DataFrame or filter for a specific category size.
 
     Args:
         category_id (int | None): Optional ID to filter specific size.
 
     Returns:
-        pd.DataFrame: All DataFrame or filter if category_id passed
-        None: If not found or error
+        pd.DataFrame: All metadata or specific row if category_id passed.
+        None: If not found or error.
     """
 
     if not CRAWL_FILE.exists():
@@ -579,12 +630,17 @@ def get_crawled(category_id: int | None = None) -> pd.DataFrame | None:
 
 
 def check_categories(category_id: int | None = None) -> int:
-    """
-    Checks the consistency between the local categories and the ANVISA database.
+    """Checks the consistency between the local categories and the ANVISA database.
+
+    Compares the row count of the local consolidated file against the
+    metadata fetched from the live site (crawled file).
 
     Args:
         category_id (int | None): ID to check specific category consistency.
                                   If None, checks global consistency.
+
+    Returns:
+        int: The difference between expected and found records (expected - found).
     """
     logger.info(
         f"--- Starting Index Check (Target: {category_id if category_id else 'Global'}) ---"
@@ -624,11 +680,15 @@ def check_categories(category_id: int | None = None) -> int:
 
 
 def get_last_processed_page(category_id: int) -> pd.DataFrame | None:
-    """
-    Retrieves the last successfully processed page and the table size at that time.
+    """Retrieves the last successfully processed page and the table size at that time.
+
+    Used to resume execution from a specific point.
+
+    Args:
+        category_id (int): The category ID to check.
 
     Returns:
-        pd.DataFrame: last entry found for category_id or None
+        pd.DataFrame: The last progress entry found for category_id, or None.
     """
 
     if not PROGRESS_FILE.exists():
@@ -652,13 +712,17 @@ def get_last_processed_page(category_id: int) -> pd.DataFrame | None:
 
 
 def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
-    """
-    Navigates to the target_page using a sliding window strategy.
-    Optimizes the path by choosing to start from the beginning or the end.
+    """Navigates directly to the target_page using a sliding window strategy.
+
+    Optimizes the path by choosing to start from the beginning or the end (Last Page),
+    then iterating through the visible pagination window until the target is found.
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
         target_page (int): The page number to reach.
+
+    Raises:
+        Exception: If navigation fails.
     """
     try:
         last_page_elem = driver.find_element(By.XPATH, XPATH_LAST_PAGE)
@@ -717,20 +781,15 @@ def goto_last_processed_page(driver: WebDriver, target_page: int) -> None:
 
 
 def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> None:
-    """
-    Iterates through all pages of a specific regulatory category, extracting and saving data.
+    """Iterates through all pages of a specific regulatory category.
 
-    This function handles pagination navigation, saves checkpoints for every page found,
-    and logs the execution progress. It supports resuming execution from the last
-    checkpoint if 'force' is False and the table structure remains consistent.
+    Extracts table data, saves checkpoints, and handles pagination.
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
         category_id (int): The ID of the regulatory category to scrape.
-        force (bool): If True, ignores previous progress, deletes existing chunks
-                      for this category, and starts scraping from page 1.
+        force (bool): If True, ignores previous progress and starts from page 1.
                       Defaults to False.
-
     """
     search_size = 0
     url = CATEGORIES_URL % str(category_id)
@@ -788,7 +847,7 @@ def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> No
             logger.warning(f"No data found on page {pages['current']}. Stopping category.")
             break
 
-        saved_size = save_chunk(data, category_id, pages["current"])
+        saved_size = save_chuck(data, category_id, pages["current"])
         save_progress(category_id, pages, saved_size)
         search_size += saved_size
 
@@ -817,19 +876,16 @@ def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> No
 
 
 def scrape_unit(category_id: int, force: bool = False) -> None:
-    """
-    Orchestrates the scraping process for a single regulatory category.
+    """Orchestrates the scraping process for a single regulatory category.
 
     This function acts as an isolated worker that:
-    1. Validates the category against crawled metadata (skipping if empty or missing).
+    1. Validates the category against crawled metadata.
     2. Manages the lifecycle of a dedicated Selenium WebDriver instance.
     3. Delegates the actual extraction logic to `scrape_pages`.
-    4. Encapsulates error handling to ensure thread safety and fault tolerance.
 
     Args:
         category_id (int): The unique identifier of the regulatory category.
         force (bool): If True, forces a fresh scrape ignoring previous progress.
-                      Defaults to False.
     """
     try:
         logger.info(f"--- Starting Process for Category {category_id} ---")
@@ -852,15 +908,14 @@ def scrape_unit(category_id: int, force: bool = False) -> None:
 
 
 def crawl_unit(driver: WebDriver, category_id: int) -> list:
-    """
-    Navigates to the first and last page of a category to estimate data volume.
+    """Navigates to the first and last page of a category to estimate data volume.
 
     Args:
         driver (WebDriver): The active Selenium WebDriver instance.
         category_id (int): The regulatory category ID.
 
     Returns:
-        list: ["id", "page_size", "last_page", "num_items"].
+        list: A list containing ["id", "page_size", "last_page", "num_items"].
     """
     try:
         url = CATEGORIES_URL % str(category_id)
@@ -909,21 +964,20 @@ def crawl_unit(driver: WebDriver, category_id: int) -> list:
 
 
 def scrape(n_threads: int = 1, force: bool = False) -> None:
-    """
-    Orchestrates the parallel scraping of all categories.
+    """Orchestrates the parallel scraping of all categories.
 
     Manages the lifecycle of the scraping process:
-    1. Prepares the environment (cleans chunks if force=True).
+    1. Prepares the environment (creates dirs, cleans chunks if force=True).
     2. Distributes scraping tasks across a thread pool.
     3. Consolidates results into a single file.
 
     Args:
         n_threads (int): Number of concurrent threads to use. Defaults to 1.
         force (bool): If True, deletes all previous chunks and starts fresh.
-                      If False, attempts to resume based on progress.
     """
     logger.info(f"--- Starting Scraping Pipeline (Threads: {n_threads}, Force: {force}) ---")
 
+    CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
     delete_lock_progress()
 
     if force:
@@ -954,13 +1008,13 @@ def scrape(n_threads: int = 1, force: bool = False) -> None:
 
 
 def crawl() -> None:
-    """
-    Orchestrates metadata fetching for all categories listed in CATEGORIES_ID.
+    """Orchestrates metadata fetching for all categories listed in CATEGORIES_ID.
 
     Generates a CSV file (CRAWL_FILE) containing the number of items and pages
     for each category, which serves as the baseline for validation.
     """
     logger.info("--- Setup Fetch Execution ---")
+    CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
     rotate_file(CRAWL_FILE)
 
     fetch_values = []
@@ -1048,9 +1102,7 @@ def run(
         ),
     ] = False,
 ) -> None:
-    """
-    Runs the ANVISA drug listing scraper pipeline.
-    """
+    """Runs the ANVISA drug listing scraper pipeline."""
     try:
         if check:
             check_categories()
