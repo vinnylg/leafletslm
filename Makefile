@@ -156,52 +156,15 @@ clean:
 	@echo ">>> Project cleanup completed"
 
 
-## Delete all not trackerable files, include .venv, less .env 
-## In future, ask for confirmation for each remove
-# .PHONY: purge
-# purge: clean
-# 	@echo ""
-# 	@echo ">>> Delete all not trackable files, including .venv (except .env)"
-# 	find . -type d -name ".venv" -print -exec rm -rf {} +
-# 	find . -type d -name ".docsweb" -print -exec rm -rf {} +
-# 	find .tailscale -type d -name "mkdocs" -print -exec sudo rm -rf {} +
-# 	@echo ">>> Project purge completed"
-
+# Delete all not trackerable files, include .venv, less .env 
+# In future, ask for confirmation for each remove
 .PHONY: purge
 purge: clean
 	@echo ""
 	@echo ">>> Delete all not trackable files, including .venv (except .env)"
-
-	@echo ">>> Checking .venv directories"
-	@find . -type d -name ".venv" | while read d; do \
-		printf "Remove %s ? [Y/n] " "$$d"; \
-		read ans; \
-		case $$ans in \
-			[Yy]|"" ) echo "Removing $$d"; rm -rf "$$d";; \
-			* ) echo "Skipped $$d";; \
-		esac; \
-	done
-
-	@echo ">>> Checking .docsweb directories"
-	@find . -type d -name ".docsweb" | while read d; do \
-		printf "Remove %s ? [Y/n] " "$$d"; \
-		read ans; \
-		case $$ans in \
-			[Yy]|"" ) echo "Removing $$d"; rm -rf "$$d";; \
-			* ) echo "Skipped $$d";; \
-		esac; \
-	done
-
-	@echo ">>> Checking .tailscale/mkdocs directories"
-	@find .tailscale -type d -name "mkdocs" 2>/dev/null | while read d; do \
-		printf "Remove %s ? [Y/n] " "$$d"; \
-		read ans; \
-		case $$ans in \
-			[Yy]|"" ) echo "Removing $$d"; sudo rm -rf "$$d";; \
-			* ) echo "Skipped $$d";; \
-		esac; \
-	done
-
+	find . -type d -name ".venv" -print -exec rm -rf {} +
+	find . -type d -name ".docsweb" -print -exec rm -rf {} +
+# 	find .tailscale -type d -name "mkdocs" -print -exec sudo rm -rf {} +
 	@echo ">>> Project purge completed"
 
 
@@ -244,7 +207,7 @@ docs:
 		$(MAKE) docs down; \
 		$(MAKE) docs up; \
 	elif [ "$(DOCS_ARGS)" = "build" ]; then \
-		mkdocs build -f mkdocs.yaml -d .mksite; \
+		mkdocs build -f mkdocs.yaml -d .docsweb; \
 	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
 		mkdocs gh-deploy -f mkdocs.yam; \
 	else \

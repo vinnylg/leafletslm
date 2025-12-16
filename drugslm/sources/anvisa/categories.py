@@ -15,15 +15,16 @@ Scope:
     This module is not responsible for:
     - Downloading PDFs or leaflets (handled by a separate downloader module).
     - Parsing the content of the leaflets.
-    - interacting with the "Dados Abertos" API directly (uses Selenium).
+    - Interacting with the "DADOS_ABERTOS_MEDICAMENTOS.csv" metadata file.
 
 Execution Flow:
-    1.  **Orchestration (`scrape`)**: Initializes thread pool and manages directory setup.
-    2.  **Unit Execution (`scrape_unit`)**: Instantiates a WebDriver for a specific category.
-    3.  **Navigation (`scrape_pages`)**: Accesses the category URL and iterates through pages.
-    4.  **Extraction (`table2data`)**: Parses HTML tables into structured lists.
-    5.  **Persistence (`save_chuck`)**: Saves intermediate data (chunks) to disk.
-    6.  **Consolidation (`join_chunks`)**: Merges all chunks into a single dataset.
+    1.  **Scan (`crawl`)**: : Initializes the category-based search list scan by checking the first and last page.
+    2.  **Orchestration (`scrape`)**: Initializes thread pool and manages directory setup.
+    3.  **Unit Execution (`scrape_unit`)**: Instantiates a WebDriver for a specific category.
+    4.  **Navigation (`scrape_pages`)**: Accesses the category URL and iterates through pages.
+    5.  **Extraction (`table2data`)**: Parses HTML tables into structured lists.
+    6.  **Persistence (`save_chunk`)**: Saves intermediate data (chunks) to disk.
+    7.  **Consolidation (`join_chunks`)**: Merges all chunks into a single dataset.
 
 Data Persistence:
     - **Chunks**: Temporary `.pkl` files saved per page in `data/raw/anvisa/categories/chunks/`.
@@ -34,7 +35,6 @@ Data Persistence:
 Prerequisites:
     - Selenium Grid (Hub) running and accessible via `HUB_URL`.
     - Firefox/Chrome nodes connected to the Hub.
-    - Python environment with `selenium`, `pandas`, `beautifulsoup4`, `typer`.
 
 Known Limitations:
     - Dependent on specific XPath structures (`XPATH_PAGINATION`, `XPATH_PAGE_COUNT`).
@@ -124,19 +124,19 @@ XPATH_PAGE_COUNT = "//div[contains(@class, 'ng-table-counts')]"
 CATEGORIES_COLUMNS = [
     "id",
     "page",
-    "medicamento",
+    "drug",
     "link",
-    "empresa",
-    "expediente",
-    "data_pub",
+    "company",
+    "protocol",
+    "pub_date",
 ]
 """list[str]: Column names for the final scraped dataset."""
 
 METADATA_COLUMNS = [
     "id",
-    "page_size",
+    "items_page",
     "last_page",
-    "num_items",
+    "size",
 ]
 """list[str]: Column names for the metadata (crawled) file."""
 
@@ -206,7 +206,7 @@ def table2data(element: WebElement) -> list:
 
     Returns:
         list: A list of lists, where each inner list represents a row:
-              [medicamento, link, empresa, expediente, data_pub].
+              [drug, link, company, protocol, pub_date].
               Returns empty list [] on failure.
     """
     try:
@@ -238,17 +238,17 @@ def table2data(element: WebElement) -> list:
 
             tds = tds[1:]
 
-            medicamento_cell = tds[0]
-            medicamento = medicamento_cell.get_text(strip=True) or None
+            drug_cell = tds[0]
+            drug = drug_cell.get_text(strip=True) or None
 
-            a_tag = medicamento_cell.find("a")
-            link_medicamento = a_tag["href"] if a_tag and a_tag.has_attr("href") else None
+            a_tag = drug_cell.find("a")
+            link_drug = a_tag["href"] if a_tag and a_tag.has_attr("href") else None
 
-            empresa = tds[1].get_text(strip=True) or None
-            expediente = tds[2].get_text(strip=True) or None
-            data_pub = tds[3].get_text(strip=True) or None
+            company = tds[1].get_text(strip=True) or None
+            protocol = tds[2].get_text(strip=True) or None
+            pub_date = tds[3].get_text(strip=True) or None
 
-            row = [medicamento, link_medicamento, empresa, expediente, data_pub]
+            row = [drug, link_drug, company, protocol, pub_date]
             data.append(row)
 
         logger.info(f"Table parsed successfully. Extracted {len(data)} rows.")
@@ -415,7 +415,7 @@ def rotate_file(filepath: Path) -> None:
         logger.warning(f"Failed to rotate file {filepath}: {e}")
 
 
-def save_chuck(raw_data: list[list], category_id: int, page_num: int) -> int:
+def save_chunk(raw_data: list[list], category_id: int, page_num: int) -> int:
     """Saves a single page of scraped data to a pickle file (chunk).
 
     Adds metadata columns (category_id, page_num) to the raw data before saving.
@@ -445,11 +445,11 @@ def join_chunks(force: bool = False) -> None:
     """Consolidates all individual page pickle files into a single DataFrame.
 
     It can either overwrite the existing final file or merge new chunks with
-    the existing data, handling deduplication based on 'expediente'.
+    the existing data, handling deduplication based on 'protocol'.
 
     Args:
         force (bool): If True, completely overwrites the existing categories file.
-                      If False, merges new chunks with existing data.
+                      If False, merges new chunks with existing data based on protocol number.
     """
 
     all_files = list(CHUNKS_DIR.glob("*.pkl"))
@@ -476,14 +476,14 @@ def join_chunks(force: bool = False) -> None:
                 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
                 combined.loc[
                     combined.duplicated(
-                        ["expediente"],
+                        ["protocol"],
                         keep=False,
                     )
-                ].to_pickle(CATEGORIES_DIR / f"debug_dup_{timestamp}.pkl")
+                ].to_pickle(CATEGORIES_DIR / f"duplicates_to_debug_{timestamp}.pkl")
 
-                logger.info("Deduplicating based on 'expediente' keeping last")
+                logger.info("Deduplicating based on 'protocol' keeping last")
                 final_df = combined.drop_duplicates(
-                    subset=["expediente"],
+                    subset=["protocol"],
                     keep="last",
                 )
 
@@ -660,7 +660,7 @@ def check_categories(category_id: int | None = None) -> int:
         logger.error("Could not obtain metadata for comparison.")
         return -1
 
-    expected_size = crawled_df["num_items"].sum()
+    expected_size = crawled_df["size"].sum()
     diff = expected_size - local_size
 
     logger.info("--- Index Consistency Report ---")
@@ -797,7 +797,7 @@ def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> No
     logger.info(f"Accessing ANVISA search page: {url}")
     driver.get(url)
 
-    items_per_page = sel_max_items_page(driver)
+    items_page = sel_max_items_page(driver)
 
     if force:
         logger.info(f"Clearing previous chunks for Category {category_id} to start fresh.")
@@ -807,9 +807,9 @@ def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> No
             logger.info(f"Category {category_id} was fully processed in previous run. Skipping.")
             return
 
-        elif last_processed["saved_size"] != items_per_page:
+        elif last_processed["saved_size"] != items_page:
             logger.warning(
-                f"Table size inconsistent,{last_processed['saved_size']} != {items_per_page}. Structure changed. Restarting category."
+                f"Table size inconsistent,{last_processed['saved_size']} != {items_page}. Structure changed. Restarting category."
             )
             delete_chunks(category_id)
         else:
@@ -847,7 +847,7 @@ def scrape_pages(driver: WebDriver, category_id: int, force: bool = False) -> No
             logger.warning(f"No data found on page {pages['current']}. Stopping category.")
             break
 
-        saved_size = save_chuck(data, category_id, pages["current"])
+        saved_size = save_chunk(data, category_id, pages["current"])
         save_progress(category_id, pages, saved_size)
         search_size += saved_size
 
@@ -891,7 +891,7 @@ def scrape_unit(category_id: int, force: bool = False) -> None:
         logger.info(f"--- Starting Process for Category {category_id} ---")
 
         if (crawled_df := get_crawled(category_id)) is not None:
-            expected = int(crawled_df["num_items"].sum())
+            expected = int(crawled_df["size"].sum())
             logger.info(f"Category {category_id}: Expecting {expected} items.")
         else:
             logger.warning(f"Skipping Category {category_id}: Metadata not found or empty.")
@@ -915,7 +915,7 @@ def crawl_unit(driver: WebDriver, category_id: int) -> list:
         category_id (int): The regulatory category ID.
 
     Returns:
-        list: A list containing ["id", "page_size", "last_page", "num_items"].
+        list: A list containing ["id", "page_size", "last_page", "size"].
     """
     try:
         url = CATEGORIES_URL % str(category_id)
@@ -923,14 +923,14 @@ def crawl_unit(driver: WebDriver, category_id: int) -> list:
 
         driver.get(url)
 
-        items_per_page = sel_max_items_page(driver)
+        items_page = sel_max_items_page(driver)
         sleep(SLEEPSECS)
 
         pages, _, last_button = get_pages(driver)
 
         table1 = find_table(driver)
         data1 = table2data(table1)
-        page_size = len(data1)  # == items_per_page if not unique page
+        page_size = len(data1)  # == items_page if not unique page
 
         if pages["last"] > 1:
             logger.info(f"Category {category_id}: Jumping to last page ({pages['last']})...")
@@ -951,7 +951,7 @@ def crawl_unit(driver: WebDriver, category_id: int) -> list:
 
         return [
             category_id,
-            items_per_page,
+            items_page,
             pages["last"],
             total_items,
         ]
