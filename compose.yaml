@@ -6,38 +6,34 @@ x-build-config: &build_config
     - UID=${UID}
     - GID=${GID}
 
+# 1. Defina um bloco base com tudo que é comum
+x-service-base: &service_base
+  build: *build_config
+  image: drugslm:${VERSION}
+  pull_policy: build
+  volumes:
+    - ./:/workspace
+  networks:
+    - drugslm_network
+  tty: true
+  stdin_open: true
+
 services:
   drugslm:
-    build: *build_config
-    image: drugslm:${VERSION}
-    pull_policy: build
+    <<: *service_base
     container_name: drugslm
     profiles: ["dev", "scraper", "all"]
-    networks:
-      - drugslm_network
-    volumes:
-      - ./:/workspace
     environment:
       - SELENIUM_HUB_URL=http://selenium:4444/wd/hub
     command: make sleep
-    tty: true
-    stdin_open: true
 
   mkdocs:
-    build: *build_config
-    image: drugslm:${VERSION}
-    pull_policy: build
+    <<: *service_base
     container_name: drugslm-docs
     profiles: ["docs", "all"]
-    volumes:
-      - ./:/workspace
-    networks:
-      - drugslm_network
     ports:
       - "8000:8000"
-    command: make docs watch
-    tty: true
-    stdin_open: true
+    command: make docs up
     restart: unless-stopped
 
   mkdocs-funnel:
