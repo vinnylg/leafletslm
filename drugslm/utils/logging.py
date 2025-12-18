@@ -174,4 +174,6 @@ def get_log_path(script_file: Union[str, Path]) -> Path:
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
     return LOG_DIR / log_subdir_structure / f"{timestamp}.log"

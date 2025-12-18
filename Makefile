@@ -140,33 +140,83 @@ format:
 test:
 	uv run pytest tests
 
-## Delete all compiled Python files, build artifacts and caches
+
+
+#################################################################################
+# CLEANUP TARGETS                                                               #
+#################################################################################
+
+CLEAN_DIRS := .pytest_cache .ruff_cache .mypy_cache .logs_queue .nux .mkdocs
+EGG_INFO   := *.egg-info
+CONFIRM_MSG = 🔴 This will delete permanently! Confirm with "$(1)" or pass
+
+
+## Remove Python compiled files and build artifacts
 .PHONY: clean
 clean:
-	@echo ">>> Delete all compiled Python files, build artifacts and caches"
-	find . -type f -name "*.py[co]" -print -delete
-	find . -type d -name "__pycache__" -print -delete
-	find . -type d -name ".ruff_cache" -print -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -print -exec rm -rf {} +
-	find . -type d -name "*.egg-info" -print -exec rm -rf {} +
-	find . -type d -name ".logs_queue" -print -exec rm -rf {} +
-	find . -type d -name ".nux" -print -exec rm -rf {} +
-	find . -type d -name ".tmp*" -print -exec rm -rf {} +
-	find data -depth -type d -empty -print -delete
-	@echo ">>> Project cleanup completed"
+	find . -type f -name "*.py[co]" -delete
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	for dir in $(CLEAN_DIRS); do \
+		find . -type d -name "$dir" -exec rm -rf {} + 2>/dev/null || true; \
+	done
+	find . -type d -name "$(EGG_INFO)" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".tmp*" -exec rm -rf {} + 2>/dev/null || true
+	[ -d data ] && find data -depth -type d -empty -delete 2>/dev/null || true
+	[ -d logs ] && find logs -depth -type d -empty -delete 2>/dev/null || true
 
+## Remove virtual environment (requires confirmation)
+.PHONY: purge-venv
+purge-venv:
+	@echo "$(call CONFIRM_MSG,venv)"
+	@read ans; \
+	case "$$ans" in \
+		venv) rm -rf .venv ;; \
+		*) echo "❌ Canceled." ;; \
+	esac
 
-# Delete all not trackerable files, include .venv, less .env 
-# In future, ask for confirmation for each remove
-.PHONY: purge
-purge: clean
-	@echo ""
-	@echo ">>> Delete all not trackable files, including .venv (except .env)"
-	find . -type d -name ".venv" -print -exec rm -rf {} +
-	find . -type d -name ".docsweb" -print -exec rm -rf {} +
-# 	find .tailscale -type d -name "mkdocs" -print -exec sudo rm -rf {} +
-	@echo ">>> Project purge completed"
+## Remove application logs (requires confirmation)
+.PHONY: purge-logs
+purge-logs:
+	@echo "$(call CONFIRM_MSG,logs)"
+	@read ans; \
+	case "$$ans" in \
+		logs) \
+			find . -type f -name "*.log" -delete 2>/dev/null || true; \
+			rm -rf logs/* 2>/dev/null || true ;; \
+		*) echo "❌ Canceled." ;; \
+	esac
 
+## Remove nginx logs (requires confirmation and sudo)
+.PHONY: purge-nginx-logs
+purge-nginx-logs:
+	@echo "$(call CONFIRM_MSG,nginx)"
+	@read ans; \
+	case "$$ans" in \
+		nginx) rm -rf .nginx/logs ;; \
+		*) echo "❌ Canceled." ;; \
+	esac
+
+## Remove user data directory (requires confirmation)
+.PHONY: purge-data
+purge-data:
+	@echo "$(call CONFIRM_MSG,data)"
+	@read ans; \
+	case "$$ans" in \
+		data) rm -rf data/* 2>/dev/null || true ;; \
+		*) echo "❌ Canceled." ;; \
+	esac
+	
+## Remove tailscale data (requires confirmation and sudo)
+# purge-tailscale:
+# 	@echo "$(call CONFIRM_MSG,tailscale)"
+# 	@read ans; \
+# 	case "$$ans" in \
+# 		tailscale) sudo rm -rf .tailscale/data ;; \
+# 		*) echo "❌ Canceled." ;; \
+# 	esac
+
+## Nuclear option: purge everything (confirms each target)
+purge-all: clean purge-venv purge-logs purge-nginx-logs purge-data
 
 #################################################################################
 # DOCUMENTATION CONTROLLER                                                      #
@@ -207,7 +257,7 @@ docs:
 		$(MAKE) docs down; \
 		$(MAKE) docs up; \
 	elif [ "$(DOCS_ARGS)" = "build" ]; then \
-		mkdocs build -f mkdocs.yaml -d .docsweb; \
+		mkdocs build -f mkdocs.yaml -d .mkdocs; \
 	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
 		mkdocs gh-deploy -f mkdocs.yam; \
 	else \
@@ -218,18 +268,45 @@ docs:
 
 
 #################################################################################
-# DOCKER CONTROLLER - Only Cleanup                                                              #
+# HELPER - Execution Context Check                                              #
+#################################################################################
+# Macro to detect if the make command is running inside a Docker container.
+# It checks for the existence of the /.dockerenv file (standard in containers).
+define BLOCK_IN_DOCKER
+	@if [ -f /.dockerenv ]; then \
+		echo "❌ ERROR: The command '$(MAKECMDGOALS)' cannot be run inside a container."; \
+		echo "   -> Please exit the container (type 'exit') and run this from your Host machine."; \
+		exit 1; \
+	fi
+endef
+
+# TODO: Think in
+# - docker-funnel: docker compose up funnel nginx chat mkdocs
+#################################################################################
+# DOCKER CONTROLLER - Only Cleanup                                              #
 #################################################################################
 .PHONY: docker-clean docker-purge
 
-PROJECT := $(notdir $(CURDIR))
+# Gets the current folder name to use as the project name
+# PROJECT := $(notdir $(CURDIR))
+# 	docker compose -p $(PROJECT) down --rmi all --remove-orphans
 
 docker-clean:
-	docker compose -p $(PROJECT) down --rmi all --remove-orphans
+	$(BLOCK_IN_DOCKER)
+	@echo "🧹 Cleaning up containers, networks, and images..."
+	docker compose down --rmi all --remove-orphans
 
 docker-purge:
-	docker compose -p $(PROJECT) down --rmi all --volumes --remove-orphans
-
+	$(BLOCK_IN_DOCKER)
+	@echo "🔴 WARNING: You are about to delete containers, images, and PERSISTENT VOLUMES."
+	@echo -n "Type 'destroy' to confirm ( or anything to cancel ): "; \
+	read ans; \
+	if [ "$$ans" != "destroy" ]; then \
+		echo "❌ Canceled. Confirmation failed."; \
+		exit 1; \
+	fi
+	@echo "🔥 Purging everything..."
+	docker compose down --rmi all --volumes --remove-orphans
 
 #################################################################################
 # START CONTROLLER                                                              #
