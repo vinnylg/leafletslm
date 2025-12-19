@@ -1,3 +1,5 @@
+name: drugslm
+
 x-build-config: &build_config
   context: .
   target: dev
@@ -6,7 +8,6 @@ x-build-config: &build_config
     - UID=${UID}
     - GID=${GID}
 
-# 1. Defina um bloco base com tudo que é comum
 x-service-base: &service_base
   build: *build_config
   image: drugslm:${VERSION}
@@ -19,10 +20,10 @@ x-service-base: &service_base
   stdin_open: true
 
 services:
-  drugslm:
+  dev:
     <<: *service_base
-    container_name: drugslm
-    profiles: ["dev", "scraper", "all"]
+    container_name: drugslm-dev
+    profiles: ["all"]
     environment:
       - SELENIUM_HUB_URL=http://selenium:4444/wd/hub
     command: make sleep
@@ -30,77 +31,41 @@ services:
   mkdocs:
     <<: *service_base
     container_name: drugslm-docs
-    profiles: ["docs", "all"]
+    profiles: ["all"]
     ports:
       - "8000:8000"
-    command: make docs up
+    command: make docs watch
     restart: unless-stopped
 
-  mkdocs-funnel:
-    image: tailscale/tailscale:latest
-    container_name: drugslm-docs-funnel
-    profiles: ["funnel", "all"]
-    network_mode: service:mkdocs
-    depends_on:
-      - mkdocs
-    env_file:
-      - .secrets/tailscale.env
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-      - .tailscale/mkdocs:/var/lib/tailscale
-      - .tailscale/mkdocs-funnel.json:/config/server.json:ro
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    restart: unless-stopped
-
-  selenium:
-    image: selenium/hub:4.15.0
-    container_name: drugslm-selenium
-    profiles: ["scraper", "all"]
-    networks:
-      - drugslm_network
-    ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
-      interval: 10s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
-
-  firefox:
-    image: selenium/node-firefox:4.15.0
-    container_name: drugslm-firefox
-    profiles: ["scraper", "all"]
-    shm_size: 4gb
-    depends_on:
-      selenium:
-        condition: service_healthy
-    deploy:
-      replicas: ${FIREFOX_NODES:-1}
-    networks:
-      - drugslm_network
-    ports:
-      - "5900"
-      - "7900"
+  chat:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: drugslm-chat
+    profiles: ["all"]
     environment:
-      - SE_EVENT_BUS_HOST=selenium
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - PORT=3000
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - chat:/app/backend/data
+    networks:
+      - drugslm_network
+    ports:
+      - "3000:3000"
+    depends_on:
+      - ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
 
   ollama:
     image: ollama/ollama:latest
     container_name: drugslm-ollama
-    profiles: ["model", "all"]
+    profiles: ["all"]
     networks:
       - drugslm_network
-    ports:
-      - "11434:11434"
-    tty: true
-    stdin_open: true
     volumes:
       - ollama:/root/.ollama
     deploy:
@@ -112,9 +77,100 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
+  nginx:
+    image: nginx:alpine
+    container_name: drugslm-nginx
+    profiles: ["all"]
+    volumes:
+      - .nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - .nginx/www:/var/www
+      - .nginx/snippets:/etc/nginx/snippets
+      - .nginx/logs:/var/log/nginx
+    networks:
+      - drugslm_network
+    ports:
+      - "8080:80"
+    depends_on:
+      chat:
+        condition: service_healthy
+      mkdocs:
+        condition: service_started
+    restart: unless-stopped
+
+  funnel:
+    image: tailscale/tailscale:latest
+    container_name: drugslm-funnel
+    profiles: ["all"]
+    network_mode: service:nginx
+    depends_on:
+      - nginx
+    env_file:
+      - .secrets/tailscale.env
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+      # - tailscale:/var/lib/tailscale
+      - .tailscale/funnel.json:/config/server.json:ro
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  selenium:
+    image: selenium/hub:4.15.0
+    container_name: drugslm-selenium
+    profiles: ["all"]
+    networks:
+      - drugslm_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  firefox:
+    image: selenium/node-firefox:4.15.0
+    container_name: drugslm-firefox
+    profiles: ["all"]
+    shm_size: 4gb
+    depends_on:
+      selenium:
+        condition: service_healthy
+    deploy:
+      replicas: ${FIREFOX_NODES:-1}
+    networks:
+      - drugslm_network
+    environment:
+      - SE_EVENT_BUS_HOST=selenium
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    restart: unless-stopped
+
+  chrome:
+    image: selenium/node-chrome:4.15.0
+    container_name: drugslm-chrome
+    profiles: ["all"]
+    shm_size: 4gb
+    depends_on:
+      selenium:
+        condition: service_healthy
+    deploy:
+      replicas: ${CHROME_NODES:-1}
+    networks:
+      - drugslm_network
+    environment:
+      - SE_EVENT_BUS_HOST=selenium
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    restart: unless-stopped
+
 networks:
   drugslm_network:
     name: drugslm_network
 
 volumes:
+  # tailscale:
   ollama:
+  # nginx:
+  chat:

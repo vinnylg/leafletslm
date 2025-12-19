@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page not found</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --card-color: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent-color: #ff6b6b;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Dark Mode support (opcional, mas legal) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #1a1a1a;
+                --card-color: #2d2d2d;
+                --text-primary: #e0e0e0;
+                --text-secondary: #a0a0a0;
+            }
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: var(--card-color);
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 6rem;
+            margin: 0;
+            color: var(--accent-color);
+            line-height: 1;
+            font-weight: 700;
+        }
+
+        h2 {
+            margin-top: 10px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+
+        .divider {
+            height: 2px;
+            width: 50px;
+            background-color: var(--accent-color);
+            margin: 20px auto;
+            border-radius: 2px;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 24px;
+            background-color: var(--text-primary);
+            color: var(--card-color);
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>404</h1>
+        <h2>Oops! Nothing here.</h2>
+        <div class="divider"></div>
+        <p>The page you are looking for on <strong>DrugSLM</strong> appears to have disappeared or never existed.</p>
+        <a href="/" class="btn">Return to Home</a>
+    </div>
+</body>
+</html>

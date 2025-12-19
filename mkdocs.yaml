@@ -1,6 +1,10 @@
 site_name: DrugSLM Documentation
 site_author: Vinícius de Lima Gonçalves
 
+# site_url: http://drugslm.com/docs/
+site_url: ""
+use_directory_urls: true
+
 theme:
   name: material
   features:

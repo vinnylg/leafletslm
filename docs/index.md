@@ -31,12 +31,12 @@ flowchart LR
 
     classDef phase fill:#f0f4f8,stroke:#2c3e50,stroke-width:2px,color:#2c3e50;
 
-    P1(1: Data Acquisition):::phase
-    P2(Phase 2:<br/>Modeling):::phase
-    P3(Phase 3:<br/>Training):::phase
-    P4(Phase 4:<br/>Evaluation):::phase
-    P5(Phase 5:<br/>Deployment):::phase
-    P6(Phase 6:<br/>Monitoring):::phase
+    P1(Data Acquisition):::phase
+    P2(Data Processing):::phase
+    P3(Model Traning):::phase
+    P4(Model Evaluation):::phase
+    P5(Experiment Deployment):::phase
+    P6(Metrics Monitoring):::phase
 
     P1 <==> P2 <==> P3 <==> P4 <==> P5 <==> P6
 
