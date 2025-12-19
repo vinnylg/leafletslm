@@ -33,8 +33,8 @@
         "richie5um2.vscode-sort-json",
         "tamasfe.even-better-toml",
         "tomoki1207.pdf",
-        "tyriar.sort-lines",
-        "yzane.markdown-pdf"
+        "tyriar.sort-lines"
+        // "yzane.markdown-pdf"
         // "oderwat.indent-rainbow"
       ],
 
@@ -43,7 +43,7 @@
         "[python]": {
           "editor.formatOnSave": true,
           "editor.defaultFormatter": "charliermarsh.ruff",
-          "python.defaultInterpreterPath": "/opt/venv/bin/python",
+          "python.defaultInterpreterPath": ".venv/bin/python",
           "python.terminal.activateEnvironment": true,
           "python.analysis.diagnosticMode": "workspace"
         },
@@ -95,6 +95,14 @@
         "jupyter.widgetScriptSources": ["unpkg.com", "jsdelivr.com"],
         "notebook.markup.fontSize": 12,
 
+        "jupyter.askForKernelRestart": false,
+        // "jupyter.noDefaultKernel": true,
+        "jupyter.interactiveWindow.defaultKernel": ".venv",
+        "jupyter.sendSelectionToInteractiveWindow": true,
+        "jupyter.showKernelSelectionOnNonPythonWindow": false,
+
+        "jupyter.kernels.filter": [], // Kernels para esconder
+
         // Exclusão de arquivos na barra lateral
         "files.exclude": {
           "**/.DS_Store": true,
@@ -112,6 +120,16 @@
           "**/.xls": true
         },
 
+        // Exclusão do vigia para esses arquivos
+        "files.watcherExclude": {
+          "**/.csv": true,
+          "**/.parquet": true,
+          "**/.pkl": true,
+          "**/.xls": true,
+          "**/__pycache__": true,
+          "**/.venv": true
+        },
+
         // Desativa o Github Copilot neste ambiente
         "github.copilot.enable": {
           "*": false
@@ -124,7 +142,32 @@
         "workbench.tree.renderIndentGuides": "always",
         "explorer.compactFolders": false,
 
-        "terminal.integrated.suggest.enabled": false
+        "terminal.integrated.suggest.enabled": false,
+
+        // --- Correções e Sugestões Genéricas ---
+        "extensions.ignoreRecommendations": true,
+        "extensions.autoCheckUpdates": false,
+        "zenMode.silentNotifications": true,
+
+        // --- Novas configurações de silenciamento ---
+        // Desativa banners de "Deseja instalar a extensão recomendada para arquivos .XYZ?"
+        "workbench.extensions.actionButton.show": "none",
+
+        // Silencia notificações de progresso em segundo plano (ajuda com o "Installing...")
+        "notification.displayMode": "none",
+
+        // Evita que o VS Code abra o terminal ou dê foco em saídas de log sozinho
+        "presentation.reveal": "never",
+        "workbench.panel.opensMaximized": "never",
+
+        // Desativa avisos de "Esta pasta contém arquivos que podem ser perigosos" (Trust)
+        "security.workspace.trust.enabled": false,
+
+        // Impede que o VS Code tente "ajudar" com atualizações de ferramentas de linguagem
+        "go.toolsManagement.autoUpdate": false,
+        "python.analysis.diagnosticPublishDelay": 1000,
+        "html.suggest.html5": true,
+        "update.showReleaseNotes": false
       }
     }
   }

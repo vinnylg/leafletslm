@@ -1,4 +1,4 @@
-name: drugslm
+# name: drugslm
 
 x-build-config: &build_config
   context: .
@@ -23,24 +23,26 @@ services:
   dev:
     <<: *service_base
     container_name: drugslm-dev
-    profiles: ["all"]
-    environment:
-      - SELENIUM_HUB_URL=http://selenium:4444/wd/hub
-    command: make sleep
-
-  mkdocs:
-    <<: *service_base
-    container_name: drugslm-docs
-    profiles: ["all"]
+    profiles: ["all", "scrap", "models"]
     ports:
       - "8000:8000"
-    command: make docs watch
-    restart: unless-stopped
+    environment:
+      - SELENIUM_HUB_URL=http://selenium:4444/wd/hub
+      - OLLAMA_BASE_URL=http://ollama:11434
+
+    command: make sleep
+
+  docs:
+    <<: *service_base
+    container_name: drugslm-docs
+    profiles: ["all", "nginx", "funnel"]
+    command: make docs-build
+    restart: on-failure
 
   chat:
     image: ghcr.io/open-webui/open-webui:latest
     container_name: drugslm-chat
-    profiles: ["all"]
+    profiles: ["all", "chat", "nginx", "funnel"]
     environment:
       - PORT=3000
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -63,7 +65,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: drugslm-ollama
-    profiles: ["all"]
+    profiles: ["all", "models", "chat", "nginx", "funnel"]
     networks:
       - drugslm_network
     volumes:
@@ -80,12 +82,12 @@ services:
   nginx:
     image: nginx:alpine
     container_name: drugslm-nginx
-    profiles: ["all"]
+    profiles: ["all", "nginx", "funnel"]
     volumes:
       - .nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - .nginx/www:/var/www
       - .nginx/snippets:/etc/nginx/snippets
       - .nginx/logs:/var/log/nginx
+      - .nginx/www:/var/www
     networks:
       - drugslm_network
     ports:
@@ -93,14 +95,14 @@ services:
     depends_on:
       chat:
         condition: service_healthy
-      mkdocs:
-        condition: service_started
+      docs:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   funnel:
     image: tailscale/tailscale:latest
     container_name: drugslm-funnel
-    profiles: ["all"]
+    profiles: ["all", "funnel"]
     network_mode: service:nginx
     depends_on:
       - nginx
@@ -108,7 +110,6 @@ services:
       - .secrets/tailscale.env
     volumes:
       - /dev/net/tun:/dev/net/tun
-      # - tailscale:/var/lib/tailscale
       - .tailscale/funnel.json:/config/server.json:ro
     cap_add:
       - NET_ADMIN
@@ -118,7 +119,7 @@ services:
   selenium:
     image: selenium/hub:4.15.0
     container_name: drugslm-selenium
-    profiles: ["all"]
+    profiles: ["all", "scrap"]
     networks:
       - drugslm_network
     healthcheck:
@@ -132,7 +133,7 @@ services:
   firefox:
     image: selenium/node-firefox:4.15.0
     container_name: drugslm-firefox
-    profiles: ["all"]
+    profiles: ["all", "scrap"]
     shm_size: 4gb
     depends_on:
       selenium:
@@ -150,7 +151,7 @@ services:
   chrome:
     image: selenium/node-chrome:4.15.0
     container_name: drugslm-chrome
-    profiles: ["all"]
+    profiles: ["all", "scrap"]
     shm_size: 4gb
     depends_on:
       selenium:
@@ -170,7 +171,5 @@ networks:
     name: drugslm_network
 
 volumes:
-  # tailscale:
   ollama:
-  # nginx:
   chat:

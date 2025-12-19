@@ -219,52 +219,30 @@ purge-data:
 purge-all: clean purge-venv purge-logs purge-nginx-logs purge-data
 
 #################################################################################
-# DOCUMENTATION CONTROLLER                                                      #
+# DOCUMENTATION                                                                 #
 #################################################################################
 
-# Detect if the target is "docs"
-ifeq (docs,$(firstword $(MAKECMDGOALS)))
-  DOCS_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-  $(eval $(DOCS_ARGS):;@:)
-endif
+.PHONY: docs-up docs-watch docs-build docs-deploy
 
-## Manage Documentation (Args: up, down, restart, build, deploy)
-.PHONY: docs
-docs:
-	@if [ -z "$(DOCS_ARGS)" ]; then \
-		echo "Usage: make docs [COMMAND]"; \
-		echo ""; \
-		echo "Commands:"; \
-		echo "  up       Serve documentation locally (0.0.0.0:8000)"; \
-		echo "  watch    Watch files with entr and serve documentation locally (0.0.0.0:8000)"; \
-		echo "  down     Stop documentation server"; \
-		echo "  restart  Restart the documentation server"; \
-		echo "  build    Build static documentation to site/"; \
-		echo "  deploy   Deploy documentation to GitHub Pages"; \
-		echo ""; \
-	elif [ "$(DOCS_ARGS)" = "up" ]; then \
-		echo ">>> Serving documentation..."; \
-		echo "mkdocs serve -a 0.0.0.0:8000"; \
-		mkdocs serve -a 0.0.0.0:8000; \
-	elif [ "$(DOCS_ARGS)" = "watch" ]; then \
-		echo ">>> Serving documentation..."; \
-		echo "find docs/ drugslm/ -type f \( -name "*.py" -o -name "*.md" \) | entr -r mkdocs serve -a 0.0.0.0:8000"; \
-		find docs/ drugslm/ -type f \( -name "*.py" -o -name "*.md" \) | entr -r mkdocs serve -a 0.0.0.0:8000; \
-	elif [ "$(DOCS_ARGS)" = "down" ]; then \
-		echo ">>> Stopping documentation server..."; \
-		pkill -f "mkdocs serve" || echo "Mkdocs not running"; \
-	elif [ "$(DOCS_ARGS)" = "restart" ]; then \
-		$(MAKE) docs down; \
-		$(MAKE) docs up; \
-	elif [ "$(DOCS_ARGS)" = "build" ]; then \
-		mkdocs build -f mkdocs.yaml -d .mkdocs; \
-	elif [ "$(DOCS_ARGS)" = "deploy" ]; then \
-		mkdocs gh-deploy -f mkdocs.yam; \
-	else \
-		echo "Unknown command: '$(DOCS_ARGS)'"; \
-		exit 1; \
-	fi
+## Serve documentation locally
+docs-up:
+	@echo ">>> Serving documentation on http://localhost:8000"
+	mkdocs serve -a 0.0.0.0:8000
 
+## Watch files and serve documentation
+docs-watch:
+	@echo ">>> Watching files and serving..."
+	find docs/ drugslm/ -type f \( -name "*.py" -o -name "*.md" \) | entr -r mkdocs serve -a 0.0.0.0:8000
+
+## Build static documentation
+docs-build:
+	@echo ">>> Building static site..."
+	mkdocs build -d .nginx/www/docs/
+
+## Deploy to GitHub Pages
+docs-deploy:
+	@echo ">>> Deploying to GitHub Pages..."
+	mkdocs gh-deploy --force
 
 
 #################################################################################
@@ -285,28 +263,36 @@ endef
 #################################################################################
 # DOCKER CONTROLLER - Only Cleanup                                              #
 #################################################################################
-.PHONY: docker-clean docker-purge
+.PHONY: docker-down docker-clean docker-purge
 
 # Gets the current folder name to use as the project name
 # PROJECT := $(notdir $(CURDIR))
 # 	docker compose -p $(PROJECT) down --rmi all --remove-orphans
 
+docker-down:
+	$(BLOCK_IN_DOCKER)
+# 	@echo "Stopping containers..."
+	docker compose -p $(COMPOSE_PROJECT_NAME) down
+	@echo
+
 docker-clean:
 	$(BLOCK_IN_DOCKER)
-	@echo "🧹 Cleaning up containers, networks, and images..."
-	docker compose down --rmi all --remove-orphans
+# 	@echo "🧹 Cleaning up containers, networks, and images..."
+	docker compose -p $(COMPOSE_PROJECT_NAME) down --rmi all --remove-orphans
+	@echo
 
 docker-purge:
 	$(BLOCK_IN_DOCKER)
 	@echo "🔴 WARNING: You are about to delete containers, images, and PERSISTENT VOLUMES."
-	@echo -n "Type 'destroy' to confirm ( or anything to cancel ): "; \
+	@echo -n "Type '$(COMPOSE_PROJECT_NAME)' to confirm ( or anything to cancel ): "; \
 	read ans; \
-	if [ "$$ans" != "destroy" ]; then \
+	if [ "$$ans" != "$(COMPOSE_PROJECT_NAME)" ]; then \
 		echo "❌ Canceled. Confirmation failed."; \
 		exit 1; \
 	fi
-	@echo "🔥 Purging everything..."
-	docker compose down --rmi all --volumes --remove-orphans
+# 	@echo "🔥 Purging everything..."
+	docker compose -p $(COMPOSE_PROJECT_NAME) down --rmi all --volumes --remove-orphans
+	@echo
 
 #################################################################################
 # START CONTROLLER                                                              #
