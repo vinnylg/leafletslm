@@ -1,5 +1,8 @@
-# name: drugslm
+name: ${COMPOSE_PROJECT_NAME}
 
+# ==============================================================================
+# 0. BASE CONFIGURATION & ANCHORS
+# ==============================================================================
 x-build-config: &build_config
   context: .
   target: dev
@@ -20,29 +23,77 @@ x-service-base: &service_base
   stdin_open: true
 
 services:
+
+  # ============================================================================
+  # 1. WORKSPACE & DEVELOPMENT (Interactive & Drafts)
+  # ============================================================================
+  
+  # Main entry point for coding, VS Code devcontainer, or shell execution
   dev:
     <<: *service_base
     container_name: drugslm-dev
-    profiles: ["all", "scrap", "models"]
-    ports:
-      - "8000:8000"
+    profiles: ["all", "dev"]
     environment:
       - SELENIUM_HUB_URL=http://selenium:4444/wd/hub
       - OLLAMA_BASE_URL=http://ollama:11434
-
     command: make sleep
 
-  docs:
+  # Live-reload documentation server (Draft mode)
+  mkdocs:
     <<: *service_base
-    container_name: drugslm-docs
-    profiles: ["all", "nginx", "funnel"]
-    command: make docs-build
-    restart: on-failure
+    container_name: drugslm-mkdocs
+    profiles: ["all", "dev", "draft"]
+    ports:
+      - "8000:8000"
+    command: make docs-watch
+    restart: unless-stopped
+
+  # Tailscale funnel for the draft documentation
+  mkdocs-funnel:
+    image: tailscale/tailscale:latest
+    container_name: drugslm-mkdocs-funnel
+    profiles: ["all", "dev", "draft", "funnel"]
+    network_mode: service:mkdocs
+    depends_on:
+      - mkdocs
+    env_file:
+      - .secrets/tailscale.env
+    environment:
+      - TS_HOSTNAME=drugslm-docs
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+      - .tailscale/mkdocs.json:/config/server.json:ro
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  # ============================================================================
+  # 2. AI CORE & MODELS
+  # ============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: drugslm-ollama
+    # Required by dev, chat, and modeling tasks
+    profiles: ["all", "models", "chat", "dev", "nginx"]
+    networks:
+      - drugslm_network
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
 
   chat:
     image: ghcr.io/open-webui/open-webui:latest
     container_name: drugslm-chat
-    profiles: ["all", "chat", "nginx", "funnel"]
+    # Independent service, but also a dependency for nginx
+    profiles: ["all", "chat", "funnel", "nginx"]
     environment:
       - PORT=3000
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -62,60 +113,29 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: drugslm-ollama
-    profiles: ["all", "models", "chat", "nginx", "funnel"]
-    networks:
-      - drugslm_network
-    volumes:
-      - ollama:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    container_name: drugslm-nginx
-    profiles: ["all", "nginx", "funnel"]
-    volumes:
-      - .nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - .nginx/snippets:/etc/nginx/snippets
-      - .nginx/logs:/var/log/nginx
-      - .nginx/www:/var/www
-    networks:
-      - drugslm_network
-    ports:
-      - "8080:80"
-    depends_on:
-      chat:
-        condition: service_healthy
-      docs:
-        condition: service_completed_successfully
-    restart: unless-stopped
-
-  funnel:
+  # Direct exposure for the Chat (Bypassing Nginx for isolation)
+  chat-funnel:
     image: tailscale/tailscale:latest
-    container_name: drugslm-funnel
-    profiles: ["all", "funnel"]
-    network_mode: service:nginx
+    container_name: drugslm-chat-funnel
+    profiles: ["all", "chat", "funnel"]
+    network_mode: service:chat
     depends_on:
-      - nginx
+      - chat
     env_file:
       - .secrets/tailscale.env
+    environment:
+      - TS_HOSTNAME=drugslm-chat
     volumes:
       - /dev/net/tun:/dev/net/tun
-      - .tailscale/funnel.json:/config/server.json:ro
+      - .tailscale/chat.json:/config/server.json:ro
     cap_add:
       - NET_ADMIN
       - NET_RAW
     restart: unless-stopped
 
+  # ============================================================================
+  # 3. DATA COLLECTION (Scraping Stack)
+  # ============================================================================
   selenium:
     image: selenium/hub:4.15.0
     container_name: drugslm-selenium
@@ -166,6 +186,62 @@ services:
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     restart: unless-stopped
 
+  # ============================================================================
+  # 4. PRODUCTION & EXPOSURE (Static Build & Gateway)
+  # ============================================================================
+  
+  # Builder: compiles documentation to static files
+  docs:
+    <<: *service_base
+    container_name: drugslm-docs
+    profiles: ["all", "nginx", "deploy"]
+    command: make docs-build
+    restart: on-failure
+
+  # Gateway: Serves static docs and proxies requests
+  nginx:
+    image: nginx:alpine
+    container_name: drugslm-nginx
+    profiles: ["all", "nginx", "deploy"]
+    volumes:
+      - .nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - .nginx/snippets:/etc/nginx/snippets
+      - .nginx/logs:/var/log/nginx
+      - .nginx/www:/var/www
+    networks:
+      - drugslm_network
+    ports:
+      - "8080:80"
+    depends_on:
+      chat:
+        condition: service_healthy
+      docs:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Tailscale funnel specific for Nginx gateway
+  nginx-funnel:
+    image: tailscale/tailscale:latest
+    container_name: drugslm-nginx-funnel
+    profiles: ["all", "nginx", "deploy", "funnel"]
+    network_mode: service:nginx
+    depends_on:
+      - nginx
+    env_file:
+      - .secrets/tailscale.env
+    environment:
+      - TS_HOSTNAME=drugslm-nginx
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+      - .tailscale/nginx.json:/config/server.json:ro
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+# ==============================================================================
+# INFRASTRUCTURE (Networks & Storage)
+# ==============================================================================
 networks:
   drugslm_network:
     name: drugslm_network
