@@ -46,22 +46,50 @@ nav:
       - Infrastructure: architecture/infrastructure.md
   - Design Reference:
       - design/index.md
-      - Sources:
-          - ANVISA:
-              - Categories: design/sources/anvisa/categories.md
+      - Datasets:
+          - Sources:
+              - ANVISA:
+                  - Categories: design/datasets/sources/anvisa/categories.md
   - API Reference:
       - reference/index.md
-      - Sources:
-          - reference/sources/index.md
-          - ANVISA:
-              - reference/sources/anvisa/index.md
-              - Categories: reference/sources/anvisa/categories.md
-      # - Canonical: []
-      # - Features: []
-      # - Models: []
-      # - Database: []
-      # - Analysis: []
-      - Config:
-          - Tree: reference/config/tree.md
-      - Utils:
-          - Selenium: reference/utils/selenium.md
+      - Datasets:
+          - reference/datasets/index.md
+          - Sources:
+              - reference/datasets/sources/index.md
+              - ANVISA:
+                  - reference/datasets/sources/anvisa/index.md
+                  - Categories: reference/datasets/sources/anvisa/categories.md
+          - Transform: []
+          - Features: []
+          - Loaders: []
+
+      - Models:
+          - Definitions: []
+          - Adapters: []
+          - RAG: []
+
+      - Training:
+          - Loops: []
+          - Objectives: []
+          - RLHF: []
+
+      - Evaluation:
+          - Metrics: []
+          - Benchmarks: []
+
+      - Interface:
+          - Chat: []
+          - Telemetry: []
+          - Deploy: []
+
+      - Experiments:
+          - Tracking: []
+          - Visualization: []
+          - Storytelling: []
+
+      - Core:
+        - Config:
+            - Tree: reference/config/tree.md
+        - Database: []
+        - Utils:
+            - Selenium: reference/utils/selenium.md

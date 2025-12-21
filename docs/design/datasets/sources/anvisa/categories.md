@@ -2,7 +2,7 @@
 
 ## Sequece Diagram
 
-The module `drugslm.sources.anvisa.categories` operates following the flow below:
+The module `drugslm.etl.sources.anvisa.categories` operates following the flow below:
 
 ```mermaid
 sequenceDiagram

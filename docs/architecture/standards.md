@@ -90,7 +90,7 @@ flowchart LR
 
 | Shape Name & Usual Meaning | Mermaid Syntax | Project Meaning |
 | :--- | :---: | :--- |
-| **Divided Rectangle**</br>Divided Process | `div-rect` | **Package/Module**</br>A self-contained code package (e.g., `drugslm.sources`, `drugslm.sources.anvisa`) or module (e.g., `drugslm.sources.anvisa.catalog`). Redirect to respective reference page. |
+| **Divided Rectangle**</br>Divided Process | `div-rect` | **Package/Module**</br>A self-contained code package (e.g., `drugslm.etl.sources`, `drugslm.etl.sources.anvisa`) or module (e.g., `drugslm.etl.sources.anvisa.catalog`). Redirect to respective reference page. |
 | **Stadium**</br>Terminal Point | `id([Text])`</br>`stadium` | **Function**</br>A specific logic block, class, or script that is crucial for understanding the flow. |
 | **Curved Trapezoid**</br>Display | `curv-trap` | **Interface**</br>Refers to any UI/UX compoment used or created. |
 | **Trapezoid Top**</br>Manual Operation | `id[\Text/]`</br>`manual` | **Human Task**</br>Manual annotation, expert validation, creation of protocols, or ground truth sampling. |
@@ -134,10 +134,10 @@ flowchart LR
 | Class | Style Preview | Meaning |
 | :--- | :--- | :--- |
 | `:::done` | Green (Solid) | **Done**</br>Completed artifacts or processes. |
-| `:::active`| Yellow (Bold) | **Active**</br>Currently work-in-progress. |
+| `:::active` | Yellow (Bold) | **Active**</br>Currently work-in-progress. |
 | `:::must` | Pink (Solid) | **Must**</br>Mandatory milestones. High priority. |
 | `:::todo` | Blue (Dashed) | **Todo**</br>Planned future tasks (Backlog). |
-| `:::dropped`| **Gray (Faded)**| **Aborted**</br>Features or paths that were discarded or de-prioritized. |
+| `:::dropped` | **Gray (Faded)** | **Aborted**</br>Features or paths that were discarded or de-prioritized. |
 
 ## Interaction Flows & Dependencies
 
