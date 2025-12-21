@@ -1,0 +1,7 @@
+.mermaid {
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+  margin: 1.5em 0;
+  padding: 10px 0;
+}

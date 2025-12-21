@@ -1,7 +1,6 @@
 site_name: DrugSLM Documentation
 site_author: Vinícius de Lima Gonçalves
 
-# site_url: http://drugslm.com/docs/
 site_url: ""
 use_directory_urls: true
 
@@ -12,6 +11,9 @@ theme:
     - content.code.copy
     - navigation.indexes
     - navigation.top
+
+extra_css:
+  - assets/stylesheets/mermaid.css
 
 plugins:
   - search
@@ -35,14 +37,14 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Project Architecture:
+  - Architecture:
       - architecture/index.md
-      - Visual Standards: architecture/standards.md
-      - Data Roadmap:
+      - Standards: architecture/standards.md
+      - Roadmap:
           - architecture/roadmap/index.md
           - Phase 1 Detailment: architecture/roadmap/phase1.md
       - Infrastructure: architecture/infrastructure.md
-  - Library Design:
+  - Design Reference:
       - design/index.md
       - Sources:
           - ANVISA:

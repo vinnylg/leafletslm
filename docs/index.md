@@ -22,30 +22,35 @@ This project is part of a Master's thesis in Computer Science at the **Federal U
 
 High-quality outcomes likely depend on rigorously structured data rather than massive scale, favoring Small Language Models (SLMs). Leveraging Knowledge Graphs aims to provide precise context and granularity. Comparing architectures intends to demonstrate that data structure is key to resource-efficient, reliable pharmacological AI.
 
-## 🧬 Project Lifecycle & Roadmap
+## 🧬 Project Lifecycle and Roadmap
 
 The project follows a rigorous 6-phase data-centric methodology, ensuring reproducibility and reliability from data acquisition to model deployment.
 
 ```mermaid
+
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '20px', 'fontFamily': 'arial' }}}%%
+
 flowchart LR
 
-    classDef phase fill:#f0f4f8,stroke:#2c3e50,stroke-width:2px,color:#2c3e50;
+    classDef phase fill:#f0f4f8,stroke:#2c3e50,stroke-width:1px,color:#2c3e50, text-decoration: none;
 
-    P1(Data Acquisition):::phase
-    P2(Data Processing):::phase
-    P3(Model Traning):::phase
-    P4(Model Evaluation):::phase
-    P5(Experiment Deployment):::phase
-    P6(Metrics Monitoring):::phase
+    P1(Data Acquisition</br>& Preparation):::phase
+    P2(Modeling</br>& Design):::phase
+    P3(Traning</br>& Optimization):::phase
+    P4(Evaluation</br>& Validation):::phase
+    P5(Integration</br>& Optimization):::phase
+    P6(Deployment</br>& Feedback):::phase
 
-    P1 <==> P2 <==> P3 <==> P4 <==> P5 <==> P6
+    P1 ==> P2 ==> P3 ==> P4 ==> P5 ==> P6
+    P2 -.-> P1
+    P4 -.-> P2
 
-    click P1 "architecture/roadmap/#data-acquisition-and-preparation-etl" "Go to Phase 1: Acquisition"
-    click P2 "architecture/roadmap/#modeling-and-system-design" "Go to Phase 2: Modeling"
-    click P3 "architecture/roadmap/#training-and-optimization" "Go to Phase 3: Training"
-    click P4 "architecture/roadmap/#evaluation-and-validation" "Go to Phase 4: Evaluation"
-    click P5 "architecture/roadmap/#deployment" "Go to Phase 5: Deployment"
-    click P6 "architecture/roadmap/#monitoring-and-continuous-improvement" "Go to Phase 6: Monitoring"
+    click P1 "architecture/roadmap/#1-data-acquisition-and-preparation" "Go to Phase 1: Data Acquisition and Preparation"
+    click P2 "architecture/roadmap/#2-modeling-and-system-design" "Go to Phase 2: Modeling and System Design"
+    click P3 "architecture/roadmap/#3-training-and-optimization" "Go to Phase 3: Training and Optimization"
+    click P4 "architecture/roadmap/#4-evaluation-and-validation" "Go to Phase 4: Evaluation and Validation"
+    click P5 "architecture/roadmap/#5-integration-and-optimization" "Go to Phase 5: Integration and Optimization"
+    click P6 "architecture/roadmap/#6-deployment-and-feedback" "Go to Phase 6: Monitoring"
 
 
 ```
@@ -64,18 +69,30 @@ flowchart LR
     <a href="getting-started/">Installation Guide →</a>
   </div>
   
+  <!-- <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>👹 Demo Chat</h3>
+    <p>Here will be a link to an experimental chat.</p>
+    <a href="getting-started/">Installation Guide →</a>
+  </div> -->
+
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>🏗️ Architecture & Design</h3>
-    <p>Visual standards, data lineage roadmaps, and logical system design hub.</p>
-    <a href="architecture/">View Design Docs →</a>
+    <h3>🏗️ Architecture</h3>
+    <p>Visual standards, data lineage roadmaps and logical connections.</p>
+    <a href="architecture/">View Architecture Docs →</a>
   </div>
-  
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+
+  <!-- <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
     <h3>🛠️ Infrastructure</h3>
     <p>Hardware specifications, GPU constraints, and containerized services setup.</p>
     <a href="architecture/infrastructure/">Hardware & Deployment →</a>
-  </div>
+  </div> -->
   
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>✍🏼 Design Reference</h3>
+    <p>Visual and logical system design.</p>
+    <a href="design/">View Code Design Docs →</a>
+  </div>
+
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
     <h3>📚 API Reference</h3>
     <p>Comprehensive module documentation, pipeline interfaces, and internal tools.</p>
