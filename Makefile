@@ -232,7 +232,7 @@ docs-up:
 ## Watch files and serve documentation
 docs-watch:
 	@echo ">>> Watching files and serving..."
-	find docs/ drugslm/ -type f \( -name "*.py" -o -name "*.md" \) | entr -r mkdocs serve -a 0.0.0.0:8000
+	find docs/ drugslm/ mkdocs.yaml -type f \( -name "*.py" -o -name "*.md" -o -name "*.js" -o -name "*.css" -o -name "mkdocs.yaml" \) | entr -r mkdocs serve -a 0.0.0.0:8000
 
 ## Build static documentation
 docs-build:
