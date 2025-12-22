@@ -23,11 +23,10 @@ x-service-base: &service_base
   stdin_open: true
 
 services:
-
   # ============================================================================
   # 1. WORKSPACE & DEVELOPMENT (Interactive & Drafts)
   # ============================================================================
-  
+
   # Main entry point for coding, VS Code devcontainer, or shell execution
   dev:
     <<: *service_base
@@ -189,7 +188,7 @@ services:
   # ============================================================================
   # 4. PRODUCTION & EXPOSURE (Static Build & Gateway)
   # ============================================================================
-  
+
   # Builder: compiles documentation to static files
   docs:
     <<: *service_base

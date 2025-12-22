@@ -11,8 +11,11 @@
         "aaron-bond.better-comments",
         "bierner.github-markdown-preview",
         "bierner.markdown-preview-github-styles",
-        "charliermarsh.ruff",
+        "bierner.markdown-yaml-preamble",
+        "yzhang.markdown-all-in-one",
+        // "yzane.markdown-pdf"
         "davidanson.vscode-markdownlint",
+        "charliermarsh.ruff",
         "eamodio.gitlens",
         "esbenp.prettier-vscode",
         "gruntfuggly.todo-tree",
@@ -33,9 +36,8 @@
         "richie5um2.vscode-sort-json",
         "tamasfe.even-better-toml",
         "tomoki1207.pdf",
-        "tyriar.sort-lines"
-        // "yzane.markdown-pdf"
-        // "oderwat.indent-rainbow"
+        "tyriar.sort-lines",
+        "oderwat.indent-rainbow"
       ],
 
       "settings": {
@@ -56,6 +58,9 @@
           "MD033": false,
           "MD041": false
         },
+
+        "markdown.suggest.paths.includeWorkspaceRoot": false,
+        "markdown.editor.filePaste.enabled": "smart",
 
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,

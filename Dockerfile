@@ -43,9 +43,14 @@ USER ${USER}
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-RUN echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
+RUN echo '' >> ~/.bashrc && \
+    echo '# Snippet inserted by Dockerfile' >> ~/.bashrc && \
+    echo '' >> ~/.bashrc && \
+    echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc && \
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc && \
-    echo 'source /workspace/.venv/bin/activate' >> ~/.bashrc
+    echo '' >> ~/.bashrc && \
+    echo 'source /workspace/.scripts/bash_options' >> ~/.bashrc && \
+    echo 'source /workspace/.venv/bin/activate' >> ~/.bashrc 
 
 WORKDIR /workspace
 
