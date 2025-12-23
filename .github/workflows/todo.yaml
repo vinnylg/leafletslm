@@ -1,0 +1,26 @@
+name: "TODO to Issue"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  todo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "TODO to Issue"
+        uses: alstr/todo-to-issue-action@v5.1.13
+        with:
+          INSERT_ISSUE_URL: "true"
+          CLOSE_ISSUES: "true"
+          AUTO_PULL: "false"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
