@@ -69,11 +69,11 @@ flowchart LR
     <a href="getting-started/">Installation Guide →</a>
   </div>
   
-  <!-- <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>👹 Demo Chat</h3>
-    <p>Here will be a link to an experimental chat.</p>
-    <a href="getting-started/">Installation Guide →</a>
-  </div> -->
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+    <h3>👹 DrugSLM Demo</h3>
+    <p>Click here to see a demonstration of the Chat.</p>
+    <a href="/demo">DrugSLM Demo →</a>
+  </div>
 
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
     <h3>🏗️ Architecture</h3>
@@ -81,11 +81,11 @@ flowchart LR
     <a href="architecture/">View Architecture Docs →</a>
   </div>
 
-  <!-- <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
     <h3>🛠️ Infrastructure</h3>
     <p>Hardware specifications, GPU constraints, and containerized services setup.</p>
     <a href="architecture/infrastructure/">Hardware & Deployment →</a>
-  </div> -->
+  </div>
   
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
     <h3>✍🏼 Design Reference</h3>
@@ -104,6 +104,6 @@ flowchart LR
 
 This is an active research project. If you're interested in collaborating or have suggestions, feel free to open an issue or reach out.
 
-<!-- ## 📄 License
+## 📄 License
 
-This project is licensed under the BSD License. See [LICENSE](LICENSE) for details. -->
+This project is licensed under the BSD License. See [LICENSE](LICENSE.md) for details.

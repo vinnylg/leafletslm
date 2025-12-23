@@ -34,22 +34,23 @@ markdown_extensions:
           class: mermaid
           # format: !!python/name:pymdownx.superfences.fence_code_format or set "yaml.customTags": ["!python/name:*"]
 
-nav:
+nav: # @claude: Nav is getting to big. Create TODO for see alternatives, like mkdocs-awesome-pages-plugin 
   - Home: index.md
   - Getting Started: getting-started.md
   - Architecture:
       - architecture/index.md
       - Standards: architecture/standards.md
-      - Roadmap:
-          - architecture/roadmap/index.md
-          - Phase 1 Detailment: architecture/roadmap/phase1.md
-      - Infrastructure: architecture/infrastructure.md
+      - Roadmap: architecture/roadmap.md
+  - Infrastructure: infrastructure.md
   - Design Reference:
       - design/index.md
       - Datasets:
           - Sources:
               - ANVISA:
                   - Categories: design/datasets/sources/anvisa/categories.md
+          - Transform:
+              - Extractor: design/datasets/transform/extractor.md
+          - Features: []
   - API Reference:
       - reference/index.md
       - Datasets:
@@ -61,14 +62,15 @@ nav:
                   - Categories: reference/datasets/sources/anvisa/categories.md
           - Transform: []
           - Features: []
-          - Loaders: []
 
       - Models:
+          - reference/models/index.md
           - Definitions: []
           - Adapters: []
           - RAG: []
 
       - Training:
+          - reference/training/index.md
           - Loops: []
           - Objectives: []
           - RLHF: []
@@ -88,8 +90,15 @@ nav:
           - Storytelling: []
 
       - Core:
-        - Config:
-            - Tree: reference/config/tree.md
-        - Database: []
-        - Utils:
-            - Selenium: reference/utils/selenium.md
+          - Database: []
+          - Loaders: []
+          - Config:
+              - Tree: reference/config/tree.md
+          - Utils:
+              - Selenium: reference/utils/selenium.md
+
+# validation: @claude: comentei pq parece que não fez nada a mais do que já estava sendo feito
+#   links:
+#     absolute_links: relative_to_docs
+#     anchors: warn
+#     not_found: warn

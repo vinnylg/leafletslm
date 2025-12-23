@@ -1,114 +1,169 @@
 {
   "name": "DrugSLM DevContainer",
+
+  // --- Container / Workspace ---
   "dockerComposeFile": ["../compose.yaml"],
   "service": "dev",
   "runServices": ["dev"],
   "overrideCommand": true,
   "workspaceFolder": "/workspace",
+
   "customizations": {
     "vscode": {
+      // ============================
+      // Extensions (curated, review later)
+      // ============================
       "extensions": [
+        // --- Handpicked AI Chat ---
+        "anthropic.claude-code",
+        
+        // --- Markdown / Docs ---
         "aaron-bond.better-comments",
         "bierner.github-markdown-preview",
         "bierner.markdown-preview-github-styles",
         "bierner.markdown-yaml-preamble",
         "yzhang.markdown-all-in-one",
-        // "yzane.markdown-pdf"
         "davidanson.vscode-markdownlint",
+
+        // "yzane.markdown-pdf", mkdocs/python should have better options
+
+        // --- Python ---
         "charliermarsh.ruff",
-        "eamodio.gitlens",
-        "esbenp.prettier-vscode",
-        "gruntfuggly.todo-tree",
-        "ms-python.debugpy",
         "ms-python.python",
         "ms-python.vscode-pylance",
+        "ms-python.debugpy",
         "ms-python.vscode-python-envs",
-        "ms-toolsai.datawrangler",
+
+        // --- Jupyter / Data ---
+        "ms-toolsai.jupyter",
         "ms-toolsai.jupyter-keymap",
         "ms-toolsai.jupyter-renderers",
-        "ms-toolsai.jupyter",
         "ms-toolsai.vscode-jupyter-cell-tags",
-        "ms-toolsai.vscode-jupyter-slideshow",
-        "njpwerner.autodocstring",
-        "pascalreitermann93.vscode-yaml-sort",
-        "plibither8.remove-comments",
+
+        // "ms-toolsai.vscode-jupyter-slideshow", does anyone use this?
+        // "ms-toolsai.datawrangler", even libre office looks better
+
+        // --- YAML / TOML / JSON ---
         "redhat.vscode-yaml",
-        "richie5um2.vscode-sort-json",
+        // "pascalreitermann93.vscode-yaml-sort", these things need to be in order?
         "tamasfe.even-better-toml",
-        "tomoki1207.pdf",
+        // "richie5um2.vscode-sort-json", these things need to be in order?
+
+        // --- Utilities ---
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode", // Fallback global (not YAML / Markdown)
+        "gruntfuggly.todo-tree",
+        "njpwerner.autodocstring",
+        // "plibither8.remove-comments", comments are tops
         "tyriar.sort-lines",
         "oderwat.indent-rainbow"
+        // "tomoki1207.pdf" why not use a dedicated app?
       ],
 
+      // ============================
+      // VS Code Settings
+      // ============================
       "settings": {
-        "settingsSync.ignoredExtensions": true,
+        // ----------------------------
+        // Core editor discipline
+        // ----------------------------
+        "editor.detectIndentation": false,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.rulers": [80, 120],
+
+        "editor.formatOnSave": true,
+        "editor.inlineSuggest.enabled": false,
+
+        // ----------------------------
+        // Language-specific formatting
+        // ----------------------------
         "[python]": {
           "editor.formatOnSave": true,
           "editor.defaultFormatter": "charliermarsh.ruff",
-          "python.defaultInterpreterPath": ".venv/bin/python",
+          "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
           "python.terminal.activateEnvironment": true,
           "python.analysis.diagnosticMode": "workspace"
+        },
+
+        "[yaml]": {
+          "editor.tabSize": 2,
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "redhat.vscode-yaml"
         },
 
         "[markdown]": {
           "editor.formatOnSave": false
         },
 
+        // ----------------------------
+        // YAML schemas
+        // ----------------------------
+        "yaml.schemas": {
+          "https://www.schemastore.org/mkdocs-1.6.json": [
+            "**/mkdocs*.yml",
+            "**/mkdocs*.yaml"
+          ]
+        },
+
+        // ----------------------------
+        // Markdown
+        // ----------------------------
         "markdownlint.config": {
           "MD033": false,
           "MD041": false
         },
-
         "markdown.suggest.paths.includeWorkspaceRoot": false,
         "markdown.editor.filePaste.enabled": "smart",
 
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.formatOnSave": true,
-        "files.autoSave": "onFocusChange",
-
-        // Preferências de Indentação e Guias Visuais
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true,
-        "editor.detectIndentation": true,
-        "editor.rulers": [80, 120],
-
-        // Preferências de Aparência e UI
+        // ----------------------------
+        // Appearance
+        // ----------------------------
         "editor.fontFamily": "Fira Code, Cascadia Code, Consolas, 'Courier New', monospace",
         "editor.fontLigatures": true,
         "editor.fontSize": 14,
         "editor.lineHeight": 16,
+
         "editor.bracketPairColorization.enabled": true,
         "editor.guides.bracketPairs": true,
         "editor.guides.indentation": true,
         "editor.guides.highlightActiveIndentation": true,
+
         "editor.minimap.enabled": true,
         "breadcrumbs.enabled": false,
 
-        // Preferências de Comportamento do Editor
+        // ----------------------------
+        // Cursor / navigation
+        // ----------------------------
         "editor.cursorBlinking": "smooth",
         "editor.cursorSmoothCaretAnimation": "on",
         "editor.scrollBeyondLastLine": true,
-        "editor.inlineSuggest.enabled": false,
 
-        // Configurações do Terminal Integrado
+        // ----------------------------
+        // Terminal
+        // ----------------------------
         "terminal.integrated.fontFamily": "Fira Code, Cascadia Code, monospace",
         "terminal.integrated.fontSize": 14,
+        "terminal.integrated.suggest.enabled": false,
 
-        // Configurações do Jupyter e Notebooks
+        // ----------------------------
+        // Jupyter / notebooks
+        // ----------------------------
         "notebook.output.scrolling": true,
+        "notebook.markup.fontSize": 12,
         "jupyter.themeMatplotlibPlots": true,
         "jupyter.widgetScriptSources": ["unpkg.com", "jsdelivr.com"],
-        "notebook.markup.fontSize": 12,
-
         "jupyter.askForKernelRestart": false,
-        // "jupyter.noDefaultKernel": true,
         "jupyter.interactiveWindow.defaultKernel": ".venv",
         "jupyter.sendSelectionToInteractiveWindow": true,
         "jupyter.showKernelSelectionOnNonPythonWindow": false,
+        "jupyter.kernels.filter": [],
 
-        "jupyter.kernels.filter": [], // Kernels para esconder
+        // ----------------------------
+        // Files & watchers
+        // ----------------------------
+        "files.autoSave": "onFocusChange",
 
-        // Exclusão de arquivos na barra lateral
         "files.exclude": {
           "**/.DS_Store": true,
           "**/.git": true,
@@ -125,53 +180,36 @@
           "**/.xls": true
         },
 
-        // Exclusão do vigia para esses arquivos
         "files.watcherExclude": {
+          "**/__pycache__": true,
+          "**/.venv": true,
           "**/.csv": true,
           "**/.parquet": true,
           "**/.pkl": true,
-          "**/.xls": true,
-          "**/__pycache__": true,
-          "**/.venv": true
+          "**/.xls": true
         },
 
-        // Desativa o Github Copilot neste ambiente
-        "github.copilot.enable": {
-          "*": false
-        },
-
-        "editor.stickyScroll.enabled": false,
-        "terminal.integrated.stickyScroll.enabled": false,
-
+        // ----------------------------
+        // Explorer / workbench
+        // ----------------------------
         "workbench.tree.indent": 24,
         "workbench.tree.renderIndentGuides": "always",
         "explorer.compactFolders": false,
+        "editor.stickyScroll.enabled": false,
+        "terminal.integrated.stickyScroll.enabled": false,
 
-        "terminal.integrated.suggest.enabled": false,
-
-        // --- Correções e Sugestões Genéricas ---
+        // ----------------------------
+        // Security / noise control
+        // ----------------------------
+        "security.workspace.trust.enabled": false,
+        "github.copilot.enable": { "*": false },
         "extensions.ignoreRecommendations": true,
         "extensions.autoCheckUpdates": false,
         "zenMode.silentNotifications": true,
-
-        // --- Novas configurações de silenciamento ---
-        // Desativa banners de "Deseja instalar a extensão recomendada para arquivos .XYZ?"
         "workbench.extensions.actionButton.show": "none",
-
-        // Silencia notificações de progresso em segundo plano (ajuda com o "Installing...")
         "notification.displayMode": "none",
-
-        // Evita que o VS Code abra o terminal ou dê foco em saídas de log sozinho
         "presentation.reveal": "never",
         "workbench.panel.opensMaximized": "never",
-
-        // Desativa avisos de "Esta pasta contém arquivos que podem ser perigosos" (Trust)
-        "security.workspace.trust.enabled": false,
-
-        // Impede que o VS Code tente "ajudar" com atualizações de ferramentas de linguagem
-        "go.toolsManagement.autoUpdate": false,
-        "python.analysis.diagnosticPublishDelay": 1000,
-        "html.suggest.html5": true,
         "update.showReleaseNotes": false
       }
     }
