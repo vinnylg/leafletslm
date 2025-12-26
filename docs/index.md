@@ -84,7 +84,7 @@ flowchart LR
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
     <h3>🛠️ Infrastructure</h3>
     <p>Hardware specifications, GPU constraints, and containerized services setup.</p>
-    <a href="architecture/infrastructure/">Hardware & Deployment →</a>
+    <a href="infrastructure/">Hardware & Deployment →</a>
   </div>
   
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">

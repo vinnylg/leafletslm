@@ -1,6 +1,6 @@
 # Architecture & System Design
 
-This section serves as the central repository for the architectural documentation of the **DrugSLM** project. It details the conceptual design, data processing workflows, and the physical infrastructure required to support the research experiments.
+This section serves as the central repository for the architectural documentation of the **DrugSLM** project. It details the conceptual design, data processing workflows, visual standards, and the logical roadmap guiding the research experiments.
 
 To ensure clarity, precision, and consistency across the project's documentation, we have established rigorous visual standards and logical roadmaps that guide the development and reproduction of the pipeline.
 
@@ -17,19 +17,13 @@ Select a topic below to explore the system's internal design:
   </div>
 
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>🗺️ Data Roadmap</h3>
-    <p>The logical architecture of the project. Visualizes the complete ETL pipeline, from raw data acquisition to the "Magnum Opus" model evaluation.</p>
+    <h3>🗺️ Roadmap</h3>
+    <p>The complete experimental process roadmap. Covers all six phases from data acquisition through deployment and feedback collection.</p>
     <a href="roadmap/"><strong>View Roadmap →</strong></a>
-  </div>
-
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
-    <h3>🛠️ Infrastructure</h3>
-    <p>Physical and software specifications. Details the hardware constraints, GPU availability, and the Docker-based container orchestration.</p>
-    <a href="infrastructure/"><strong>View Infrastructure →</strong></a>
   </div>
 
 </div>
 
 ---
 
-> **Note:** If you are looking for code-level documentation (classes and functions), please refer to the [API Reference](../reference/index.md)
+> **Note:** For physical infrastructure details (hardware, GPU, containers), see [Infrastructure](../infrastructure.md). For code-level documentation (classes and functions), refer to the [API Reference](../reference/index.md).

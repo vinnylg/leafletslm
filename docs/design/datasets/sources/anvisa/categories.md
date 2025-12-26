@@ -1,8 +1,15 @@
-# Anvisa Categories Module Diagrams
+# ANVISA Categories Module Design
 
-## Sequece Diagram
+<!-- TODO(!documentation): Document category ID meanings
+     Map category IDs 1-12 to their regulatory meanings.
+     Some categories (11, 12) appear empty - document why.
+     labels: documentation, data-sources -->
 
-The module `drugslm.etl.sources.anvisa.categories` operates following the flow below:
+This document describes the workflow for scraping drug listings from ANVISA's category-based search interface.
+
+## 🔄 Sequence Diagram
+
+The module `drugslm.sources.anvisa.categories` operates following the flow below:
 
 ```mermaid
 sequenceDiagram
@@ -117,3 +124,28 @@ sequenceDiagram
     CLI-->>User: Process Complete
     deactivate CLI
 ```
+
+## 🔑 Key Design Decisions
+
+<!-- TODO(!documentation): Document pagination strategy rationale
+     Explain why sliding window navigation was chosen over direct page access.
+     labels: documentation -->
+
+1. **Chunk-based persistence** - Saves progress per page to survive failures
+2. **File locking** - Prevents corruption during parallel writes
+3. **Sliding window pagination** - Handles ANVISA's dynamic pagination UI
+
+## ⚠️ Known Limitations
+
+<!-- TODO(!documentation): Add XPATH monitoring strategy
+     Portal changes break scrapers. Consider implementing change detection
+     or automated tests against live portal.
+     labels: documentation, maintenance -->
+
+- XPath selectors tied to current ANVISA portal structure
+- Categories 11 and 12 currently return no data
+- Rate limiting handled via sleep delays (not adaptive)
+
+---
+
+> **Implementation:** See [drugslm.sources.anvisa.categories](../../../../reference/datasets/sources/anvisa/categories.md)

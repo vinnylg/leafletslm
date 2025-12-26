@@ -4,6 +4,16 @@ Welcome to the technical reference for the `drugslm` package. This documentation
 
 Below is an overview of the high-level modules and their responsibilities.
 
+<!-- TODO(!documentation): Create index.md files for each major module
+     Currently only Datasets has a proper index. Need to create:
+     - reference/models/index.md
+     - reference/training/index.md
+     - reference/evaluation/index.md
+     - reference/interface/index.md
+     - reference/experiments/index.md
+     - reference/core/index.md
+     labels: documentation -->
+
 ---
 
 ## [Datasets](datasets/index.md)
@@ -20,7 +30,7 @@ This module handles the data lifecycle. Unlike traditional ETL pipelines, the fo
 
 > **The Engine**
 
-Contains the static architectural definitions and design strategies. This module defines *what- the model is before it begins learning.
+Contains the static architectural definitions and design strategies. This module defines *what* the model is before it begins learning.
 
 - **Definitions**: Base classes and wrappers for Large Language Models (e.g., Llama, BERT).
 - **Adapters**: Configuration for parameter-efficient adaptation strategies (PEFT, LoRA).
@@ -30,7 +40,7 @@ Contains the static architectural definitions and design strategies. This module
 
 > **The Process**
 
-Encapsulates the dynamic optimization logic. This module defines *how- the model learns and adapts to the data.
+Encapsulates the dynamic optimization logic. This module defines *how* the model learns and adapts to the data.
 
 - **Loops**: The training execution cycles (Pre-training, SFT).
 - **Objectives**: Mathematical loss functions and optimization goals.

@@ -3,49 +3,38 @@
 [![CCDS](https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter)](https://cookiecutter-data-science.drivendata.org/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-MkDocs-blue?logo=materialformkdocs)](docs/index.md)
 
-## Small Language Model (SLM) for Pharmaceutical Information
+**Small Language Model for Pharmaceutical Information**
 
-Master's thesis in Computer Science at the Federal University of Paraná (UFPR), focusing on the development of a specialized language model using drug package inserts and medical databases.
-
-## 🎯 Overview
-
-DrugSLM is a research project that aims to create a domain-specific language model trained on pharmaceutical data from regulatory agencies. 
+Master's thesis in Computer Science at the Federal University of Paraná (UFPR), focusing on domain-specific language models trained on drug package inserts and medical databases.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- **Docker & Docker Compose** 
-- [uv](https://github.com/astral-sh/uv) package manager
-- make
-
-### Installation
-
-#### Option 1: Using Docker (Recommended)
-
 ```bash
-# Clone the repository
+# Clone and start
 git clone https://github.com/vinnylg/drugslm.git
 cd drugslm
+docker compose up -d dev      # Development container
+docker compose up -d mkdocs   # Docs at localhost:8000
 
-# Start services
-docker compose up -d drugslm  # Base container
-docker compose up -d mkdocs   # Documentation server (localhost:8000)
-
-# Attach to container
-docker exec -it drugslm_base bash
+# Attach to dev container
+docker exec -it drugslm-dev bash
 ```
 
-## 📁 Project Structure
+**Prerequisites:** Docker & Docker Compose, [uv](https://github.com/astral-sh/uv), make
 
-## 🛠️ Development Workflow
+## 📖 Documentation
 
-## 🤝 Contributing
+| Section | Description |
+|:--------|:------------|
+| [Getting Started](docs/getting-started.md) | Installation and setup guide |
+| [Architecture](docs/architecture/index.md) | Visual standards and roadmap |
+| [Infrastructure](docs/infrastructure.md) | Hardware and container setup |
+| [Design Reference](docs/design/index.md) | System design and workflows |
+| [API Reference](docs/reference/index.md) | Code documentation |
 
 ## 📝 Citation
-
-If you use this work in your research, please cite:
 
 ```bibtex
 @mastersthesis{goncalves2026drugslm,
@@ -60,19 +49,8 @@ If you use this work in your research, please cite:
 
 ## 📄 License
 
-This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICENSE) file for details.
+BSD 3-Clause License - see [LICENSE](LICENSE) for details.
 
-## 👤 Author
+---
 
-**Vinícius de Lima Gonçalves**  
-Master's Student in Computer Science  
-Federal University of Paraná (UFPR)  
-Curitiba, Brazil
-
-> See more:
-| [Documentation](docs/index.md)
-| [Architecture](docs/architecture/index.md)
-| [Infrastructure](docs/infrastructure.md)
-| [Design](docs/design/index.md)
-| [API Reference](docs/reference/index.md)
-|
+**Author:** Vinícius de Lima Gonçalves | UFPR, Curitiba, Brazil

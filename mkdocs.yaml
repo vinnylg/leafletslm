@@ -1,3 +1,8 @@
+# TODO(!documentation): Investigate mkdocs-awesome-pages-plugin for auto-nav generation
+# Nav structure is growing large and manual maintenance is becoming cumbersome.
+# Plugin could auto-generate nav from directory structure with .pages files.
+# labels: enhancement, documentation
+
 site_name: DrugSLM Documentation
 site_author: Vinícius de Lima Gonçalves
 
@@ -32,9 +37,8 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          # format: !!python/name:pymdownx.superfences.fence_code_format or set "yaml.customTags": ["!python/name:*"]
 
-nav: # @claude: Nav is getting to big. Create TODO for see alternatives, like mkdocs-awesome-pages-plugin 
+nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Architecture:
@@ -45,12 +49,40 @@ nav: # @claude: Nav is getting to big. Create TODO for see alternatives, like mk
   - Design Reference:
       - design/index.md
       - Datasets:
+          - design/datasets/index.md
           - Sources:
+              - design/datasets/sources/index.md
               - ANVISA:
+                  - design/datasets/sources/anvisa/index.md
                   - Categories: design/datasets/sources/anvisa/categories.md
           - Transform:
+              - design/datasets/transform/index.md
               - Extractor: design/datasets/transform/extractor.md
           - Features: []
+      - Models:
+          - Definitions: []
+          - Adapters: []
+          - RAG: []
+      - Training:
+          - Loops: []
+          - Objectives: []
+          - RLHF: []
+      - Evaluation:
+          - Metrics: []
+          - Benchmarks: []
+      - Interface:
+          - Chat: []
+          - Telemetry: []
+          - Deploy: []
+      - Experiments:
+          - Tracking: []
+          - Visualization: []
+          - Storytelling: []
+      - Core:
+          - Database: []
+          - Loaders: []
+          - Config: []
+          - Utils: []
   - API Reference:
       - reference/index.md
       - Datasets:
@@ -62,33 +94,25 @@ nav: # @claude: Nav is getting to big. Create TODO for see alternatives, like mk
                   - Categories: reference/datasets/sources/anvisa/categories.md
           - Transform: []
           - Features: []
-
       - Models:
-          - reference/models/index.md
           - Definitions: []
           - Adapters: []
           - RAG: []
-
       - Training:
-          - reference/training/index.md
           - Loops: []
           - Objectives: []
           - RLHF: []
-
       - Evaluation:
           - Metrics: []
           - Benchmarks: []
-
       - Interface:
           - Chat: []
           - Telemetry: []
           - Deploy: []
-
       - Experiments:
           - Tracking: []
           - Visualization: []
           - Storytelling: []
-
       - Core:
           - Database: []
           - Loaders: []
@@ -96,9 +120,4 @@ nav: # @claude: Nav is getting to big. Create TODO for see alternatives, like mk
               - Tree: reference/config/tree.md
           - Utils:
               - Selenium: reference/utils/selenium.md
-
-# validation: @claude: comentei pq parece que não fez nada a mais do que já estava sendo feito
-#   links:
-#     absolute_links: relative_to_docs
-#     anchors: warn
-#     not_found: warn
+  - License: LICENSE.md
