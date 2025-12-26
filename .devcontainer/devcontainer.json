@@ -210,7 +210,14 @@
         "notification.displayMode": "none",
         "presentation.reveal": "never",
         "workbench.panel.opensMaximized": "never",
-        "update.showReleaseNotes": false
+        "update.showReleaseNotes": false,
+        
+        // ----------------------------
+        // Claude Code (non-invasive)
+        // ----------------------------
+        "claude-code.enableAutoComplete": false,
+        "claude-code.enableInlineEdits": false        
+        
       }
     }
   }
